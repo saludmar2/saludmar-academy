@@ -91,5 +91,21 @@ export interface CertificateLayoutConfig {
   showSignatureLine: boolean;
   signatureYOffset: number;
   showDividerLine: boolean;
+
+  // Custom visual template settings (upload your own format)
+  useCustomBackground?: boolean;
+  backgroundImageBase64?: string;
+  nameYPercent?: number;          // Position of participant name (vertical percentage 0-100)
+  cedulaYPercent?: number;        // Position of Cédula de Identidad (vertical percentage 0-100)
+  courseYPercent?: number;        // Position of course name (vertical percentage 0-100)
+  dateYPercent?: number;          // Position of date (vertical percentage 0-100)
+  qrYPercent?: number;            // Position of QR Bar (vertical percentage 0-100)
+  qrXPercent?: number;            // Position of QR Bar (horizontal percentage 0-100)
+  qrScale?: number;               // Sizing scale for the QR barcode container
+  showNameOverlay?: boolean;
+  showCedulaOverlay?: boolean;
+  showCourseOverlay?: boolean;
+  showDateOverlay?: boolean;
+  showQrOverlay?: boolean;
 }
 

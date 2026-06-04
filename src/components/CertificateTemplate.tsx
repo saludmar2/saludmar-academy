@@ -216,6 +216,22 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
     showSignatureLine = true,
     signatureYOffset = -16,
     showDividerLine = true,
+
+    // Custom background image and overlays settings
+    useCustomBackground = false,
+    backgroundImageBase64 = '',
+    nameYPercent = 40,
+    cedulaYPercent = 46,
+    courseYPercent = 55,
+    dateYPercent = 65,
+    qrYPercent = 82,
+    qrXPercent = 55,
+    qrScale = 100,
+    showNameOverlay = true,
+    showCedulaOverlay = true,
+    showCourseOverlay = true,
+    showDateOverlay = true,
+    showQrOverlay = true,
   } = layoutConfig || {};
 
   // Extract signatures from custom configuration or fallback to defaults
@@ -261,6 +277,136 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
       .replace('{fecha}', `<strong class="text-slate-900 font-extrabold">${formattedFecha}</strong>`)
       .replace('{carga}', `<strong class="text-[#082b4d] font-black">${formattedCarga}</strong>`);
   };
+
+  // Custom visual template background mode
+  if (useCustomBackground) {
+    if (!backgroundImageBase64) {
+      return (
+        <div 
+          className="w-full aspect-[1.414] bg-slate-50 border-2 border-dashed border-slate-300 rounded-3xl flex flex-col items-center justify-center p-6 text-center shadow-inner print-area"
+          id="certificate-print-view"
+        >
+          <div className="p-4 bg-amber-50 rounded-full text-amber-500 mb-3 animate-pulse">
+            <Award size={32} />
+          </div>
+          <h4 className="text-sm font-bold text-slate-700">Plantilla de Imagen Personalizada Activada</h4>
+          <p className="text-xs text-slate-500 max-w-xs mt-1 leading-normal mx-auto">
+            Cargue su formato de certificado (imagen PNG/JPG con firmas) para proyectar los nombres y códigos QR encima de él de forma dinámica.
+          </p>
+        </div>
+      );
+    }
+
+    const formattedFecha = formatDateEsp(participant.fecha);
+    const formattedCarga = getDedicacionCatedra(participant);
+
+    return (
+      <div 
+        className="relative w-full aspect-[1.414] bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden print-area select-none"
+        id="certificate-print-view"
+        style={{
+          backgroundImage: `url(${backgroundImageBase64})`,
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        {/* Dynamic Name Overlay */}
+        {showNameOverlay && (
+          <div 
+            className="absolute left-1/2 -translate-x-1/2 text-center w-[85%] z-20"
+            style={{ top: `${nameYPercent}%` }}
+          >
+            <h2 
+              style={{ fontSize: `${nameFontSize}px` }}
+              className="font-serif font-extrabold text-[#082b4d] tracking-wide leading-tight select-all drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]"
+            >
+              {participant.nombre}
+            </h2>
+          </div>
+        )}
+
+        {/* Dynamic National ID Overlay */}
+        {showCedulaOverlay && participant.cedula && (
+          <div 
+            className="absolute left-1/2 -translate-x-1/2 text-center w-[85%] z-20"
+            style={{ top: `${cedulaYPercent}%` }}
+          >
+            <p 
+              className="font-mono text-slate-700 font-bold tracking-wider leading-none drop-shadow-[0_1px_1.5px_rgba(255,255,255,0.8)]" 
+              style={{ fontSize: '11.5px' }}
+            >
+              CÉDULA DE IDENTIDAD Nº: <span className="font-extrabold text-slate-900">{participant.cedula}</span>
+            </p>
+          </div>
+        )}
+
+        {/* Dynamic Course Name Overlay */}
+        {showCourseOverlay && (
+          <div 
+            className="absolute left-1/2 -translate-x-1/2 text-center w-[85%] z-20"
+            style={{ top: `${courseYPercent}%` }}
+          >
+            <h3 
+              style={{ fontSize: `${courseFontSize}px` }}
+              className="font-serif font-extrabold text-[#082b4d]/95 tracking-tight leading-snug drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]"
+            >
+              "{participant.cursoNombre ? participant.cursoNombre.toUpperCase() : 'URGENCIAS METABÓLICAS'}"
+            </h3>
+          </div>
+        )}
+
+        {/* Dynamic Date/Logistics Overlay */}
+        {showDateOverlay && (
+          <div 
+            className="absolute left-1/2 -translate-x-1/2 text-center w-[80%] z-20"
+            style={{ top: `${dateYPercent}%` }}
+          >
+            <p className="text-slate-800 text-xs sm:text-xs leading-relaxed max-w-lg mx-auto font-medium font-sans drop-shadow-[0_1px_1.5px_rgba(255,255,255,0.8)]">
+              {bodyIntroText} de forma satisfactoria en fecha {formattedFecha}, con una carga horaria de {formattedCarga}.
+            </p>
+          </div>
+        )}
+
+        {/* Dynamic QR & Validation Block */}
+        {showQrOverlay && (
+          <div 
+            className="absolute flex items-center gap-2 bg-white/95 backdrop-blur-[1px] p-2 rounded-xl border border-slate-200/90 shadow-sm transition-transform"
+            style={{ 
+              top: `${qrYPercent}%`, 
+              left: `${qrXPercent}%`,
+              transform: `translate(-50%, -50%) scale(${qrScale / 100})`,
+              zIndex: 30,
+            }}
+          >
+            {qrBase64 ? (
+              <img 
+                src={qrBase64} 
+                alt="QR Verificación" 
+                className="w-11 h-11 object-contain shrink-0" 
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-11 h-11 bg-slate-50 rounded-lg flex items-center justify-center shrink-0">
+                <QrCode size={15} className="text-slate-350 animate-pulse" />
+              </div>
+            )}
+            <div className="text-left font-mono leading-none flex flex-col justify-center">
+              <span className="bg-slate-900 text-amber-400 font-bold text-[7.5px] px-1 py-0.5 rounded tracking-wider inline-block mb-0.5 max-w-max">
+                REGISTRO ACADÉMICO
+              </span>
+              <span className="font-mono text-[9px] font-black text-slate-800 tracking-wider">
+                {participant.certificadoCodigo || 'PROCESANDO'}
+              </span>
+              <span className="text-[6.5px] text-slate-500 font-semibold mt-0.5">
+                SaludMar Certificaciones
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div 
