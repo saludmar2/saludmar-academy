@@ -19,6 +19,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
 }) => {
   const [configs, setConfigs] = useState<SignatureConfig[]>(signatures);
   const configsRef = useRef<SignatureConfig[]>(signatures);
+  const dbSaveTimeoutRef = useRef<any>(null);
   const [activeSignee, setActiveSignee] = useState<'firmante-1' | 'firmante-2'>('firmante-1');
   const [hasInitialized, setHasInitialized] = useState(false);
   
@@ -35,6 +36,15 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
       setHasInitialized(true);
     }
   }, [signatures, hasInitialized]);
+
+  // Cleanup database timeout on component unmount
+  useEffect(() => {
+    return () => {
+      if (dbSaveTimeoutRef.current) {
+        clearTimeout(dbSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const currentConfig = configs.find(c => c.id === activeSignee) || configs.find(c => c.id === 'firmante-1') || configs[0] || { id: activeSignee, nombre: '', cargo: '', tipo: 'predeterminada' };
   const sig1Config = configs.find(c => c.id === 'firmante-1') || configs[0] || { id: 'firmante-1', nombre: '', cargo: '', tipo: 'predeterminada' };
@@ -151,11 +161,46 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
-        updateCurrentConfig({
-          tipo: 'imagen',
-          firmaBase64: event.target.result as string
-        }, true);
-        addToast(`Imagen de firma cargada para ${currentConfig.nombre}`, 'success');
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 450; // signatures don't need high resolution
+          const MAX_HEIGHT = 220;
+          let width = img.width;
+          let height = img.height;
+
+          // Scale down proportionally to fit max dimensions
+          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+            const widthRatio = MAX_WIDTH / width;
+            const heightRatio = MAX_HEIGHT / height;
+            const bestRatio = Math.min(widthRatio, heightRatio);
+            width = Math.round(width * bestRatio);
+            height = Math.round(height * bestRatio);
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/png'); // Keeps transparency cleanly and makes signature small to save in Firestore
+            
+            updateCurrentConfig({
+              tipo: 'imagen',
+              firmaBase64: dataUrl
+            }, true);
+            addToast(`Firma digital optimizada y guardada para ${currentConfig.nombre}`, 'success');
+          } else {
+            // Fallback to original Base64 if canvas is unavailable
+            updateCurrentConfig({
+              tipo: 'imagen',
+              firmaBase64: event.target.result as string
+            }, true);
+            addToast(`Firma digital cargada para ${currentConfig.nombre}`, 'success');
+          }
+        };
+        img.src = event.target?.result as string;
       }
     };
     reader.onerror = () => {
@@ -177,8 +222,23 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
     });
     setConfigs(nextConfigs);
     configsRef.current = nextConfigs;
-    // Propagate to parent state immediately for smooth preview, option to force cloud write
-    onSaveSignatures(nextConfigs, forceSaveToDb);
+    
+    // Propagate changes instantly to state for visual rendering
+    onSaveSignatures(nextConfigs, false);
+
+    // Cancel previous save timers
+    if (dbSaveTimeoutRef.current) {
+      clearTimeout(dbSaveTimeoutRef.current);
+    }
+
+    if (forceSaveToDb) {
+      onSaveSignatures(nextConfigs, true);
+    } else {
+      // Automatically save to database after continuous quiet writing stream (600ms)
+      dbSaveTimeoutRef.current = setTimeout(() => {
+        onSaveSignatures(nextConfigs, true);
+      }, 600);
+    }
   };
 
   // Save changes back to App system level
