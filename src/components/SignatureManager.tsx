@@ -168,6 +168,8 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
       return c;
     });
     setConfigs(nextConfigs);
+    // Instant background auto-save to Parent & Firestore on any change
+    onSaveSignatures(nextConfigs);
   };
 
   // Save changes back to App system level
@@ -193,12 +195,19 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={handleSaveChanges}
-          className="bg-[#082b4d] hover:bg-[#0b5c8c] text-white font-extrabold text-xs px-6 py-3 rounded-xl transition-all duration-200 shadow-md transform hover:scale-[1.01] active:scale-[0.98] shrink-0 cursor-pointer"
-        >
-          Guardar Todas las Firmas
-        </button>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-200 text-[11px] sm:text-xs font-black tracking-wide select-none">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Guardado al Instante</span>
+          </div>
+
+          <button
+            onClick={handleSaveChanges}
+            className="bg-[#082b4d] hover:bg-[#0b5c8c] text-white font-extrabold text-[11px] sm:text-xs px-5 py-2.5 sm:py-3 rounded-xl transition-all duration-200 shadow-md transform hover:scale-[1.01] active:scale-[0.98] shrink-0 cursor-pointer"
+          >
+            Guardar Firmas
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

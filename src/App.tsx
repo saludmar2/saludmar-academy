@@ -182,11 +182,15 @@ export default function App() {
         if (!sigsSnap.empty) {
           const loadedSigs: SignatureConfig[] = [];
           sigsSnap.forEach((doc) => {
-            loadedSigs.push(doc.data() as SignatureConfig);
+            const data = doc.data() as SignatureConfig;
+            loadedSigs.push({
+              ...data,
+              id: (data.id || doc.id) as 'firmante-1' | 'firmante-2'
+            });
           });
           setSignatures(loadedSigs);
-        } else if (!alreadyInitialized) {
-          // Initialize in firestore via Batch
+        } else {
+          // Initialize in firestore via Batch to prevent empty states
           const batch = writeBatch(db);
           for (const sig of DEFAULT_SIGNATURES) {
             const sigRef = doc(db, 'signatures', sig.id);
@@ -194,8 +198,6 @@ export default function App() {
           }
           await batch.commit();
           setSignatures(DEFAULT_SIGNATURES);
-        } else {
-          setSignatures([]);
         }
 
         // Load Courses
