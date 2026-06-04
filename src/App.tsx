@@ -267,8 +267,9 @@ export default function App() {
     loadFirebaseData();
   }, []);
 
-  const handleSaveSignatures = async (newSignatures: SignatureConfig[]) => {
+  const handleSaveSignatures = async (newSignatures: SignatureConfig[], saveToDb: boolean = true) => {
     setSignatures(newSignatures);
+    if (!saveToDb) return;
     try {
       const batch = writeBatch(db);
       for (const sig of newSignatures) {

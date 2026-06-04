@@ -24,7 +24,7 @@ interface AdminSectionProps {
   addToast: (text: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   onViewCertificateOfStudent: (id: string) => void;
   signatures: SignatureConfig[];
-  onSaveSignatures: (newSignatures: SignatureConfig[]) => void;
+  onSaveSignatures: (newSignatures: SignatureConfig[], saveToDb?: boolean) => void;
   layoutConfig: CertificateLayoutConfig;
   courseLayoutConfigs?: Record<string, CertificateLayoutConfig>;
   onSaveLayoutConfig: (courseId: string, newLayout: CertificateLayoutConfig) => void;

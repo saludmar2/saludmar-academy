@@ -8,7 +8,7 @@ import {
 
 interface SignatureManagerProps {
   signatures: SignatureConfig[];
-  onSaveSignatures: (newSignatures: SignatureConfig[]) => void;
+  onSaveSignatures: (newSignatures: SignatureConfig[], saveToDb?: boolean) => void;
   addToast: (text: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
@@ -19,18 +19,20 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
 }) => {
   const [configs, setConfigs] = useState<SignatureConfig[]>(signatures);
   const [activeSignee, setActiveSignee] = useState<'firmante-1' | 'firmante-2'>('firmante-1');
+  const [hasInitialized, setHasInitialized] = useState(false);
   
   // HTML5 Drawing Canvas states
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
 
-  // Sync state if prop changes
+  // Sync state if prop changes - ONLY once on mount / initial load
   useEffect(() => {
-    if (signatures && signatures.length > 0) {
+    if (!hasInitialized && signatures && signatures.length > 0) {
       setConfigs(signatures);
+      setHasInitialized(true);
     }
-  }, [signatures]);
+  }, [signatures, hasInitialized]);
 
   const currentConfig = configs.find(c => c.id === activeSignee) || configs.find(c => c.id === 'firmante-1') || configs[0] || { id: activeSignee, nombre: '', cargo: '', tipo: 'predeterminada' };
   const sig1Config = configs.find(c => c.id === 'firmante-1') || configs[0] || { id: 'firmante-1', nombre: '', cargo: '', tipo: 'predeterminada' };
@@ -172,20 +174,18 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
       return c;
     });
     setConfigs(nextConfigs);
-    // Only invoke heavy cloud save immediately for discrete edits like drawings/images or explicit requests
-    if (forceSaveToDb) {
-      onSaveSignatures(nextConfigs);
-    }
+    // Propagate to parent state immediately for smooth preview, option to force cloud write
+    onSaveSignatures(nextConfigs, forceSaveToDb);
   };
 
   // Save changes back to App system level
   const handleSaveChanges = () => {
-    onSaveSignatures(configs);
+    onSaveSignatures(configs, true);
     addToast('¡Configuraciones y firmas digitales guardadas correctamente!', 'success');
   };
 
   const handleBlurTextSave = () => {
-    onSaveSignatures(configs);
+    onSaveSignatures(configs, true);
   };
 
   return (
@@ -237,7 +237,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
                   key={item.id}
                   onClick={() => {
                     // Sync uncommitted state prior to toggling signee
-                    onSaveSignatures(configs);
+                    onSaveSignatures(configs, true);
                     setActiveSignee(item.id as any);
                     clearCanvas();
                   }}
