@@ -96,9 +96,13 @@ export interface CertificateLayoutConfig {
   useCustomBackground?: boolean;
   backgroundImageBase64?: string;
   nameYPercent?: number;          // Position of participant name (vertical percentage 0-100)
+  nameXPercent?: number;          // Position of participant name (horizontal percentage 0-100)
   cedulaYPercent?: number;        // Position of Cédula de Identidad (vertical percentage 0-100)
+  cedulaXPercent?: number;        // Position of Cédula de Identidad (horizontal percentage 0-100)
   courseYPercent?: number;        // Position of course name (vertical percentage 0-100)
+  courseXPercent?: number;        // Position of course name (horizontal percentage 0-100)
   dateYPercent?: number;          // Position of date (vertical percentage 0-100)
+  dateXPercent?: number;          // Position of date (horizontal percentage 0-100)
   qrYPercent?: number;            // Position of QR Bar (vertical percentage 0-100)
   qrXPercent?: number;            // Position of QR Bar (horizontal percentage 0-100)
   qrScale?: number;               // Sizing scale for the QR barcode container
@@ -107,5 +111,15 @@ export interface CertificateLayoutConfig {
   showCourseOverlay?: boolean;
   showDateOverlay?: boolean;
   showQrOverlay?: boolean;
+  cedulaFontSize?: number;        // Customize Cedula Font Size over Custom Background
+  dateFontSize?: number;          // Customize Date Text Font Size over Custom Background
+  nameWidthPercent?: number;      // Maximum container width percentage to stretch or wrap
+  courseWidthPercent?: number;    // Maximum container width percentage to stretch or wrap
+  dateWidthPercent?: number;      // Maximum container width percentage to stretch or wrap
+  cedulaWidthPercent?: number;    // Maximum container width percentage to stretch or wrap
+  nameLetterSpacing?: number;     // Extra letter spacing in pixels
+  courseLetterSpacing?: number;   // Extra letter spacing in pixels
+  globalTemplateMode?: 'per_course' | 'force_general' | 'force_course';
+  forcedCourseId?: string;
 }
 

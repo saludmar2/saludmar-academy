@@ -283,7 +283,11 @@ export default function App() {
     }
   };
 
-  const handleSaveLayoutConfig = async (courseIdOrLayout: string | CertificateLayoutConfig, optionalLayout?: CertificateLayoutConfig) => {
+  const handleSaveLayoutConfig = async (
+    courseIdOrLayout: string | CertificateLayoutConfig,
+    optionalLayout?: CertificateLayoutConfig,
+    quiet = false
+  ) => {
     let courseId = 'default';
     let newLayout: CertificateLayoutConfig;
 
@@ -299,7 +303,9 @@ export default function App() {
         setLayoutConfig(newLayout);
         const layoutRef = doc(db, 'layout', 'config');
         await setDoc(layoutRef, newLayout);
-        addToast('Diseño de plantilla general guardado en Firebase.', 'success');
+        if (!quiet) {
+          addToast('Diseño de plantilla general guardado en Firebase.', 'success');
+        }
       } else {
         setCourseLayoutConfigs(prev => ({
           ...prev,
@@ -307,8 +313,10 @@ export default function App() {
         }));
         const layoutRef = doc(db, 'layout', 'course_' + courseId);
         await setDoc(layoutRef, newLayout);
-        const courseObj = courses.find(c => c.id === courseId);
-        addToast(`Diseño para "${courseObj?.title || courseId}" guardado en Firebase.`, 'success');
+        if (!quiet) {
+          const courseObj = courses.find(c => c.id === courseId);
+          addToast(`Diseño para "${courseObj?.title || courseId}" guardado en Firebase.`, 'success');
+        }
       }
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `layout/${courseId === 'default' ? 'config' : 'course_' + courseId}`);
@@ -701,6 +709,19 @@ export default function App() {
 
   const targetCertificateParticipant = getCertificateTarget();
 
+  const getResolvedLayoutConfig = (participant: Participant): CertificateLayoutConfig => {
+    const mode = layoutConfig.globalTemplateMode || 'per_course';
+    if (mode === 'force_general') {
+      return layoutConfig;
+    }
+    if (mode === 'force_course' && layoutConfig.forcedCourseId) {
+      const targetId = layoutConfig.forcedCourseId;
+      if (targetId === 'default') return layoutConfig;
+      return courseLayoutConfigs[targetId] || layoutConfig;
+    }
+    return courseLayoutConfigs[participant.cursoId] || layoutConfig;
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-900">
       
@@ -1020,7 +1041,7 @@ export default function App() {
                     <CertificateTemplate 
                       participant={targetCertificateParticipant} 
                       signatures={signatures} 
-                      layoutConfig={courseLayoutConfigs[targetCertificateParticipant.cursoId] || layoutConfig}
+                      layoutConfig={getResolvedLayoutConfig(targetCertificateParticipant)}
                     />
                   </div>
                 </div>

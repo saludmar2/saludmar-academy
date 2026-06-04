@@ -9,6 +9,8 @@ interface CertificateTemplateProps {
   participant: Participant;
   signatures?: SignatureConfig[];
   layoutConfig?: CertificateLayoutConfig;
+  isDesigner?: boolean;
+  onUpdatePosition?: (key: string, value: any) => void;
 }
 
 // Helper wrapper to render customized signatures types (handwritten text, Base64 drawn pad, or uploaded file representation)
@@ -169,7 +171,9 @@ const WavyRibbonCorner: React.FC<{ position: 'top-left' | 'bottom-right' }> = ({
 export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({ 
   participant, 
   signatures, 
-  layoutConfig 
+  layoutConfig,
+  isDesigner = false,
+  onUpdatePosition
 }) => {
   const [qrBase64, setQrBase64] = useState<string>('');
 
@@ -221,9 +225,13 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
     useCustomBackground = false,
     backgroundImageBase64 = '',
     nameYPercent = 40,
+    nameXPercent = 50,
     cedulaYPercent = 46,
+    cedulaXPercent = 50,
     courseYPercent = 55,
+    courseXPercent = 50,
     dateYPercent = 65,
+    dateXPercent = 50,
     qrYPercent = 82,
     qrXPercent = 55,
     qrScale = 100,
@@ -232,7 +240,59 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
     showCourseOverlay = true,
     showDateOverlay = true,
     showQrOverlay = true,
+    cedulaFontSize = 11,
+    dateFontSize = 11,
+    nameWidthPercent = 85,
+    courseWidthPercent = 85,
+    dateWidthPercent = 80,
+    cedulaWidthPercent = 85,
+    nameLetterSpacing = 0,
+    courseLetterSpacing = 0,
   } = layoutConfig || {};
+
+  // Interactive mouse/touch screen drag & drop handler for visual template background tuning
+  const handleDragStart = (
+    e: React.PointerEvent<HTMLDivElement>, 
+    keyY: string, 
+    keyX?: string
+  ) => {
+    if (!isDesigner || !onUpdatePosition) return;
+    
+    e.preventDefault();
+    const element = e.currentTarget;
+    
+    // Find the relative container coordinate space (id="certificate-print-view")
+    const parent = element.closest('#certificate-print-view');
+    if (!parent) return;
+
+    const parentRect = parent.getBoundingClientRect();
+    element.setPointerCapture(e.pointerId);
+    
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const xDiff = moveEvent.clientX - parentRect.left;
+      const yDiff = moveEvent.clientY - parentRect.top;
+      
+      let xPercent = Math.max(0, Math.min(100, (xDiff / parentRect.width) * 100));
+      let yPercent = Math.max(0, Math.min(100, (yDiff / parentRect.height) * 100));
+
+      const finalY = Math.round(yPercent * 10) / 10;
+      onUpdatePosition(keyY, finalY);
+      
+      if (keyX) {
+        const finalX = Math.round(xPercent * 10) / 10;
+        onUpdatePosition(keyX, finalX);
+      }
+    };
+    
+    const handlePointerUp = () => {
+      element.releasePointerCapture(e.pointerId);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+    
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  };
 
   // Extract signatures from custom configuration or fallback to defaults
   const sig1 = signatures?.find(s => s.id === 'firmante-1');
@@ -311,15 +371,47 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
           backgroundRepeat: 'no-repeat',
         }}
       >
+        {/* Helper overlay to inform the user they can visually drag stuff when in designer environment */}
+        {isDesigner && (
+          <div className="absolute top-2 left-2 bg-[#082b4d] text-white text-[9px] font-bold px-2 py-1 rounded shadow-md z-30 pointer-events-none opacity-85 uppercase tracking-wider animate-fadeIn">
+            🖱️ ¡Arrastra los elementos con el mouse para posicionarlos!
+          </div>
+        )}
+
         {/* Dynamic Name Overlay */}
         {showNameOverlay && (
           <div 
-            className="absolute left-1/2 -translate-x-1/2 text-center w-[85%] z-20"
-            style={{ top: `${nameYPercent}%` }}
+            className={`absolute z-20 select-none ${isDesigner ? 'cursor-grab border-2 border-dashed border-amber-500 p-2 rounded-lg hover:bg-amber-100/30 active:cursor-grabbing min-w-[150px]' : 'text-center'}`}
+            style={{ 
+              top: `${nameYPercent}%`,
+              left: `${nameXPercent}%`,
+              width: `${nameWidthPercent}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+            onPointerDown={(e) => handleDragStart(e, 'nameYPercent', 'nameXPercent')}
           >
+            {isDesigner && (
+              <>
+                <span className="absolute -top-4 left-0 bg-amber-500 text-white font-sans text-[7px] font-black tracking-wider px-1 py-0.5 rounded shadow-xs select-none pointer-events-none uppercase leading-none whitespace-nowrap z-30">
+                  Nombre de Participante (Mover ↕↔)
+                </span>
+                <div 
+                  className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white border border-amber-300 rounded-full px-2 py-1 shadow-lg z-30 pointer-events-auto" 
+                  onPointerDown={e => e.stopPropagation()}
+                >
+                  <button onClick={() => onUpdatePosition!('nameFontSize', nameFontSize + 1)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Agrandar">A+</button>
+                  <button onClick={() => onUpdatePosition!('nameFontSize', Math.max(8, nameFontSize - 1))} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Achicar">A-</button>
+                  <button onClick={() => onUpdatePosition!('nameWidthPercent', nameWidthPercent + 5)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-850 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Estirar Ancho">↔</button>
+                  <button onClick={() => onUpdatePosition!('nameWidthPercent', Math.max(10, nameWidthPercent - 5))} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-850 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Estrechar Ancho">─</button>
+                  <button onClick={() => onUpdatePosition!('nameLetterSpacing', nameLetterSpacing + 1)} className="w-5 h-5 flex items-center justify-center text-[8px] font-black text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Más Separación">Ab</button>
+                  <button onClick={() => onUpdatePosition!('nameLetterSpacing', Math.max(0, nameLetterSpacing - 1))} className="w-5 h-5 flex items-center justify-center text-[8px] font-black text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Menos Separación">aB</button>
+                  <button onClick={() => onUpdatePosition!('showNameOverlay', false)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-full focus:outline-none" title="Ocultar">✕</button>
+                </div>
+              </>
+            )}
             <h2 
-              style={{ fontSize: `${nameFontSize}px` }}
-              className="font-serif font-extrabold text-[#082b4d] tracking-wide leading-tight select-all drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]"
+              style={{ fontSize: `${nameFontSize}px`, letterSpacing: `${nameLetterSpacing}px` }}
+              className="font-serif font-extrabold text-[#082b4d] tracking-normal leading-tight text-center drop-shadow-[0_1.5px_1.5px_rgba(255,255,255,0.85)]"
             >
               {participant.nombre}
             </h2>
@@ -329,12 +421,35 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
         {/* Dynamic National ID Overlay */}
         {showCedulaOverlay && participant.cedula && (
           <div 
-            className="absolute left-1/2 -translate-x-1/2 text-center w-[85%] z-20"
-            style={{ top: `${cedulaYPercent}%` }}
+            className={`absolute z-20 select-none ${isDesigner ? 'cursor-grab border-2 border-dashed border-amber-400 p-1.5 rounded-lg hover:bg-amber-100/30 active:cursor-grabbing min-w-[120px]' : 'text-center'}`}
+            style={{ 
+              top: `${cedulaYPercent}%`,
+              left: `${cedulaXPercent}%`,
+              width: `${cedulaWidthPercent}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+            onPointerDown={(e) => handleDragStart(e, 'cedulaYPercent', 'cedulaXPercent')}
           >
+            {isDesigner && (
+              <>
+                <span className="absolute -top-4 left-0 bg-amber-450 bg-amber-500 text-white font-sans text-[7px] font-black tracking-wider px-1 py-0.5 rounded shadow-xs select-none pointer-events-none uppercase leading-none whitespace-nowrap z-30">
+                  Nº Cédula (Mover ↕↔)
+                </span>
+                <div 
+                  className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white border border-amber-300 rounded-full px-2 py-1 shadow-lg z-30 pointer-events-auto" 
+                  onPointerDown={e => e.stopPropagation()}
+                >
+                  <button onClick={() => onUpdatePosition!('cedulaFontSize', cedulaFontSize + 1)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Agrandar">A+</button>
+                  <button onClick={() => onUpdatePosition!('cedulaFontSize', Math.max(5, cedulaFontSize - 1))} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Achicar">A-</button>
+                  <button onClick={() => onUpdatePosition!('cedulaWidthPercent', cedulaWidthPercent + 5)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-850 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Estirar Ancho">↔</button>
+                  <button onClick={() => onUpdatePosition!('cedulaWidthPercent', Math.max(10, cedulaWidthPercent - 5))} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-850 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Estrechar Ancho">─</button>
+                  <button onClick={() => onUpdatePosition!('showCedulaOverlay', false)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-full focus:outline-none" title="Ocultar">✕</button>
+                </div>
+              </>
+            )}
             <p 
-              className="font-mono text-slate-700 font-bold tracking-wider leading-none drop-shadow-[0_1px_1.5px_rgba(255,255,255,0.8)]" 
-              style={{ fontSize: '11.5px' }}
+              className="font-mono text-slate-700 font-bold tracking-normal leading-none drop-shadow-[0_1px_1.5px_rgba(255,255,255,0.9)] text-center" 
+              style={{ fontSize: `${cedulaFontSize}px` }}
             >
               CÉDULA DE IDENTIDAD Nº: <span className="font-extrabold text-slate-900">{participant.cedula}</span>
             </p>
@@ -344,12 +459,37 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
         {/* Dynamic Course Name Overlay */}
         {showCourseOverlay && (
           <div 
-            className="absolute left-1/2 -translate-x-1/2 text-center w-[85%] z-20"
-            style={{ top: `${courseYPercent}%` }}
+            className={`absolute z-20 select-none ${isDesigner ? 'cursor-grab border-2 border-dashed border-amber-400 p-1.5 rounded-lg hover:bg-amber-100/30 active:cursor-grabbing min-w-[180px]' : 'text-center'}`}
+            style={{ 
+              top: `${courseYPercent}%`,
+              left: `${courseXPercent}%`,
+              width: `${courseWidthPercent}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+            onPointerDown={(e) => handleDragStart(e, 'courseYPercent', 'courseXPercent')}
           >
+            {isDesigner && (
+              <>
+                <span className="absolute -top-4 left-0 bg-amber-500 text-white font-sans text-[7px] font-black tracking-wider px-1 py-0.5 rounded shadow-xs select-none pointer-events-none uppercase leading-none whitespace-nowrap z-30">
+                  Nombre Curso (Mover ↕↔)
+                </span>
+                <div 
+                  className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white border border-amber-300 rounded-full px-2 py-1 shadow-lg z-30 pointer-events-auto" 
+                  onPointerDown={e => e.stopPropagation()}
+                >
+                  <button onClick={() => onUpdatePosition!('courseFontSize', courseFontSize + 1)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Agrandar">A+</button>
+                  <button onClick={() => onUpdatePosition!('courseFontSize', Math.max(8, courseFontSize - 1))} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Achicar">A-</button>
+                  <button onClick={() => onUpdatePosition!('courseWidthPercent', courseWidthPercent + 5)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-850 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Estirar Ancho">↔</button>
+                  <button onClick={() => onUpdatePosition!('courseWidthPercent', Math.max(10, courseWidthPercent - 5))} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-850 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Estrechar Ancho">─</button>
+                  <button onClick={() => onUpdatePosition!('courseLetterSpacing', courseLetterSpacing + 1)} className="w-5 h-5 flex items-center justify-center text-[8px] font-black text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Más Separación">Ab</button>
+                  <button onClick={() => onUpdatePosition!('courseLetterSpacing', Math.max(0, courseLetterSpacing - 1))} className="w-5 h-5 flex items-center justify-center text-[8px] font-black text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Menos Separación">aB</button>
+                  <button onClick={() => onUpdatePosition!('showCourseOverlay', false)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-full focus:outline-none" title="Ocultar">✕</button>
+                </div>
+              </>
+            )}
             <h3 
-              style={{ fontSize: `${courseFontSize}px` }}
-              className="font-serif font-extrabold text-[#082b4d]/95 tracking-tight leading-snug drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]"
+              style={{ fontSize: `${courseFontSize}px`, letterSpacing: `${courseLetterSpacing}px` }}
+              className="font-serif font-extrabold text-[#082b4d]/95 tracking-normal leading-snug drop-shadow-[0_1.5px_1.5px_rgba(255,255,255,0.85)] text-center"
             >
               "{participant.cursoNombre ? participant.cursoNombre.toUpperCase() : 'URGENCIAS METABÓLICAS'}"
             </h3>
@@ -359,10 +499,36 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
         {/* Dynamic Date/Logistics Overlay */}
         {showDateOverlay && (
           <div 
-            className="absolute left-1/2 -translate-x-1/2 text-center w-[80%] z-20"
-            style={{ top: `${dateYPercent}%` }}
+            className={`absolute z-20 select-none ${isDesigner ? 'cursor-grab border-2 border-dashed border-amber-400 p-1.5 rounded-lg hover:bg-amber-100/30 active:cursor-grabbing min-w-[200px]' : 'text-center'}`}
+            style={{ 
+              top: `${dateYPercent}%`,
+              left: `${dateXPercent}%`,
+              width: `${dateWidthPercent}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+            onPointerDown={(e) => handleDragStart(e, 'dateYPercent', 'dateXPercent')}
           >
-            <p className="text-slate-800 text-xs sm:text-xs leading-relaxed max-w-lg mx-auto font-medium font-sans drop-shadow-[0_1px_1.5px_rgba(255,255,255,0.8)]">
+            {isDesigner && (
+              <>
+                <span className="absolute -top-4 left-0 bg-amber-500 text-white font-sans text-[7px] font-black tracking-wider px-1 py-0.5 rounded shadow-xs select-none pointer-events-none uppercase leading-none whitespace-nowrap z-30">
+                  Carga / Fecha (Mover ↕↔)
+                </span>
+                <div 
+                  className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white border border-amber-300 rounded-full px-2 py-1 shadow-lg z-30 pointer-events-auto" 
+                  onPointerDown={e => e.stopPropagation()}
+                >
+                  <button onClick={() => onUpdatePosition!('dateFontSize', dateFontSize + 0.5)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Agrandar">A+</button>
+                  <button onClick={() => onUpdatePosition!('dateFontSize', Math.max(5, dateFontSize - 0.5))} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Achicar">A-</button>
+                  <button onClick={() => onUpdatePosition!('dateWidthPercent', dateWidthPercent + 5)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-850 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Estirar Ancho">↔</button>
+                  <button onClick={() => onUpdatePosition!('dateWidthPercent', Math.max(15, dateWidthPercent - 5))} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-850 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Estrechar Ancho">─</button>
+                  <button onClick={() => onUpdatePosition!('showDateOverlay', false)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-full focus:outline-none" title="Ocultar">✕</button>
+                </div>
+              </>
+            )}
+            <p 
+              className="text-slate-800 leading-relaxed max-w-lg mx-auto font-medium font-sans drop-shadow-[0_1px_1.5px_rgba(255,255,255,0.9)] text-center"
+              style={{ fontSize: `${dateFontSize}px` }}
+            >
               {bodyIntroText} de forma satisfactoria en fecha {formattedFecha}, con una carga horaria de {formattedCarga}.
             </p>
           </div>
@@ -371,14 +537,29 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
         {/* Dynamic QR & Validation Block */}
         {showQrOverlay && (
           <div 
-            className="absolute flex items-center gap-2 bg-white/95 backdrop-blur-[1px] p-2 rounded-xl border border-slate-200/90 shadow-sm transition-transform"
+            className={`absolute flex items-center gap-2 bg-white/95 backdrop-blur-[1.5px] p-2 rounded-xl border shadow-sm transition-transform select-none z-30 ${isDesigner ? 'cursor-grab border-2 border-dashed border-amber-500 hover:bg-amber-500/10 active:cursor-grabbing' : 'border-slate-200/90'}`}
             style={{ 
               top: `${qrYPercent}%`, 
               left: `${qrXPercent}%`,
               transform: `translate(-50%, -50%) scale(${qrScale / 100})`,
-              zIndex: 30,
             }}
+            onPointerDown={(e) => handleDragStart(e, 'qrYPercent', 'qrXPercent')}
           >
+            {isDesigner && (
+              <>
+                <span className="absolute -top-4 left-0 bg-[#082b4d] text-white font-sans text-[7px] font-black tracking-wider px-1 py-0.5 rounded shadow-xs select-none pointer-events-none uppercase leading-none whitespace-nowrap z-40">
+                  Bloque Código QR (Mover ↕↔)
+                </span>
+                <div 
+                  className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white border border-amber-300 rounded-full px-2 py-1 shadow-lg z-40 pointer-events-auto" 
+                  onPointerDown={e => e.stopPropagation()}
+                >
+                  <button onClick={() => onUpdatePosition!('qrScale', qrScale + 5)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Agrandar QR">+</button>
+                  <button onClick={() => onUpdatePosition!('qrScale', Math.max(20, qrScale - 5))} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full focus:outline-none" title="Achicar QR">-</button>
+                  <button onClick={() => onUpdatePosition!('showQrOverlay', false)} className="w-5 h-5 flex items-center justify-center text-[10px] font-black text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-full focus:outline-none" title="Ocultar">✕</button>
+                </div>
+              </>
+            )}
             {qrBase64 ? (
               <img 
                 src={qrBase64} 

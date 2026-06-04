@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Course, Participant, SignatureConfig, CertificateLayoutConfig } from '../types';
 import { CertificateTemplate } from './CertificateTemplate';
 import { motion } from 'motion/react';
@@ -13,7 +13,7 @@ interface CertificateDesignerProps {
   courses?: Course[];
   initialSelectedCourseId?: string;
   signatures?: SignatureConfig[];
-  onSaveLayoutConfig: (courseId: string, newLayout: CertificateLayoutConfig) => void;
+  onSaveLayoutConfig: (courseId: string, newLayout: CertificateLayoutConfig, quiet?: boolean) => void;
   addToast: (text: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
@@ -90,6 +90,7 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
   addToast
 }) => {
   const [selectedCourseId, setSelectedCourseId] = useState<string>(initialSelectedCourseId);
+  const saveTimeoutRef = useRef<any>(null);
 
   // Sync with initialSelectedCourseId when it changes external-wise
   useEffect(() => {
@@ -97,6 +98,15 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
       setSelectedCourseId(initialSelectedCourseId);
     }
   }, [initialSelectedCourseId]);
+
+  // Cleanup timeout on unmount or course shift
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Determine which layout configuration to edit
   const getActiveLayout = (): CertificateLayoutConfig => {
@@ -182,13 +192,41 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
     estado: 'Aceptado'
   };
 
-  const handleChange = (key: keyof CertificateLayoutConfig, value: any) => {
+  const handleChange = (key: keyof CertificateLayoutConfig, value: any, quiet = true) => {
     const updated = {
       ...config,
       [key]: value
     };
     setConfig(updated);
-    onSaveLayoutConfig(selectedCourseId, updated); // Instant real-time save and render feedback!
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      onSaveLayoutConfig(selectedCourseId, updated, quiet);
+    }, 600); // 600ms of silence before committing to the database
+  };
+
+  const handleUpdateGlobalTemplateMode = (mode: 'per_course' | 'force_general' | 'force_course') => {
+    const updatedConfig = {
+      ...config,
+      globalTemplateMode: mode,
+      forcedCourseId: selectedCourseId
+    };
+    setConfig(updatedConfig);
+    
+    // Save to the general config as well so it is tracked globally on App launch
+    onSaveLayoutConfig('default', {
+      ...layoutConfig,
+      globalTemplateMode: mode,
+      forcedCourseId: selectedCourseId
+    }, true);
+
+    // If a course layout is active, save there too
+    if (selectedCourseId !== 'default') {
+      onSaveLayoutConfig(selectedCourseId, updatedConfig, true);
+    }
   };
 
   const handleApplyPreset = (preset: typeof PRESET_STYLES[0]) => {
@@ -196,13 +234,19 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
       ...config,
       ...preset.config
     };
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
     setConfig(updated);
-    onSaveLayoutConfig(selectedCourseId, updated);
+    onSaveLayoutConfig(selectedCourseId, updated, true); // Keep automatic save quiet
     addToast(`Diseño aplicado con éxito para la sección actual`, 'success');
   };
 
   const handleSave = () => {
-    onSaveLayoutConfig(selectedCourseId, config);
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    onSaveLayoutConfig(selectedCourseId, config, false); // Explicitly show toast
     const courseLabel = selectedCourseId === 'default' 
       ? 'Plantilla General' 
       : courses.find(c => c.id === selectedCourseId)?.title || selectedCourseId;
@@ -232,17 +276,24 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
       signatureYOffset: -16,
       showDividerLine: true,
     };
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
     setConfig(defaults);
-    onSaveLayoutConfig(selectedCourseId, defaults);
+    onSaveLayoutConfig(selectedCourseId, defaults, false); // Explicit toast
     addToast('Dimensiones y textos restaurados al valor original para esta sección', 'info');
   };
 
   const useCustomBackground = config.useCustomBackground ?? false;
   const backgroundImageBase64 = config.backgroundImageBase64 ?? '';
   const nameYPercent = config.nameYPercent ?? 40;
+  const nameXPercent = config.nameXPercent ?? 50;
   const cedulaYPercent = config.cedulaYPercent ?? 46;
+  const cedulaXPercent = config.cedulaXPercent ?? 50;
   const courseYPercent = config.courseYPercent ?? 55;
+  const courseXPercent = config.courseXPercent ?? 50;
   const dateYPercent = config.dateYPercent ?? 65;
+  const dateXPercent = config.dateXPercent ?? 50;
   const qrYPercent = config.qrYPercent ?? 82;
   const qrXPercent = config.qrXPercent ?? 55;
   const qrScale = config.qrScale ?? 100;
@@ -329,6 +380,94 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
         </div>
       )}
 
+      {/* REGLA DE APLICACIÓN GLOBAL DE PLANTILLAS */}
+      <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4 shadow-2xs">
+        <div className="space-y-1">
+          <label className="block text-xs font-black text-slate-800 tracking-wide uppercase flex items-center gap-1.5">
+            <span>⚙️ ¿Cuál certificado deseas que se use en las descargas y emisiones?</span>
+          </label>
+          <p className="text-[11px] text-slate-500">
+            Define la regla de herencia de diseños para todos los alumnos inscriptos.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button
+            onClick={() => handleUpdateGlobalTemplateMode('per_course')}
+            className={`p-3.5 rounded-xl border text-left text-xs space-y-1 transition-all cursor-pointer ${
+              (config.globalTemplateMode || 'per_course') === 'per_course'
+                ? 'bg-[#082b4d] text-white border-[#082b4d] shadow-md scale-[1.01]'
+                : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 shadow-2xs'
+            }`}
+          >
+            <div className="font-extrabold flex items-center gap-1">
+              <span>📚 Por Curso (Recomendado)</span>
+            </div>
+            <p className={`text-[10px] leading-snug ${
+              (config.globalTemplateMode || 'per_course') === 'per_course' ? 'text-slate-200' : 'text-slate-400'
+            }`}>
+              Cada curso usa su diseño personalizado. Si no tiene uno, hereda la Plantilla General.
+            </p>
+          </button>
+
+          <button
+            onClick={() => handleUpdateGlobalTemplateMode('force_general')}
+            className={`p-3.5 rounded-xl border text-left text-xs space-y-1 transition-all cursor-pointer ${
+              config.globalTemplateMode === 'force_general'
+                ? 'bg-[#082b4d] text-white border-[#082b4d] shadow-md scale-[1.01]'
+                : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-100 shadow-2xs'
+            }`}
+          >
+            <div className="font-extrabold flex items-center gap-1">
+              <span>✨ Únicamente Plantilla General</span>
+            </div>
+            <p className={`text-[10px] leading-snug ${
+              config.globalTemplateMode === 'force_general' ? 'text-slate-200' : 'text-slate-400'
+            }`}>
+              Ignora cualquier diseño por curso y obliga a todos los estudiantes a emitirse con el formato general de la Academia.
+            </p>
+          </button>
+
+          <button
+            onClick={() => handleUpdateGlobalTemplateMode('force_course')}
+            className={`p-3.5 rounded-xl border text-left text-xs space-y-1 transition-all cursor-pointer ${
+              config.globalTemplateMode === 'force_course'
+                ? 'bg-[#082b4d] text-white border-[#082b4d] shadow-md scale-[1.01]'
+                : 'bg-white hover:bg-slate-100 text-slate-700 border-[#082b4d]/25 shadow-2xs'
+            }`}
+          >
+            <div className="font-extrabold flex items-center gap-1 text-sm text-yellow-500">
+              <span>🎯 Solo el que estoy retocando</span>
+            </div>
+            <p className={`text-[10px] leading-snug ${
+              config.globalTemplateMode === 'force_course' ? 'text-slate-200' : 'text-slate-400'
+            }`}>
+              Fuerza de forma absoluta el diseño de <strong>{selectedCourseId === 'default' ? 'Plantilla General' : (courses.find(c => c.id === selectedCourseId)?.title || selectedCourseId)}</strong> para todos los diplomas del sistema.
+            </p>
+          </button>
+        </div>
+
+        {/* Dynamic status badge indicator */}
+        <div className="flex items-center gap-2 bg-slate-100/85 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-700">
+          <span className="flex h-2.5 w-2.5 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#082b4d] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#082b4d]"></span>
+          </span>
+          <div className="font-sans">
+            <span className="font-bold text-slate-900">Regla activa del sistema: </span>
+            {(config.globalTemplateMode || 'per_course') === 'per_course' && (
+              <span>Cada curso se emite de acuerdo a su propia personalización independiente.</span>
+            )}
+            {config.globalTemplateMode === 'force_general' && (
+              <span>Se utiliza únicamente la <strong>Plantilla General (Recomendado si subiste una plantilla única)</strong> para todos los cursos.</span>
+            )}
+            {config.globalTemplateMode === 'force_course' && (
+              <span>Se utiliza estrictamente el diseño de la plantilla <strong>{selectedCourseId === 'default' ? 'Plantilla General' : (courses.find(c => c.id === selectedCourseId)?.title || selectedCourseId)}</strong> para todos los cursos del portal.</span>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* SECCIÓN DEL FORMATO PERSONALIZADO CON FIRMAS (NUEVO) */}
       <div className="bg-amber-50/40 border border-amber-200/50 p-5 rounded-2xl space-y-4">
         <div className="flex items-center justify-between">
@@ -407,180 +546,285 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
             {/* Selector de qué elementos proyectar y sus sliders de posición */}
             {backgroundImageBase64 && (
               <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-3xs space-y-4">
-                <h5 className="text-[11px] font-black uppercase text-[#082b4d] tracking-wider border-b border-slate-100 pb-1.5">
-                  📐 Ajustar Posición de Textos/QR sobre su Formato
-                </h5>
+                <div className="border-b border-slate-100 pb-2">
+                  <h5 className="text-xs font-black uppercase text-[#082b4d] tracking-wide flex items-center gap-2">
+                    📐 Ajustar Ubicación de Textos/QR encima de su Formato
+                  </h5>
+                  <p className="text-[10px] text-slate-500 leading-snug mt-0.5">
+                    💡 <strong>¡Súper interactivo!</strong> Ahora puedes arrastrar cualquiera de estos bloques directamente con el mouse o con tu pantalla táctil en la vista previa del certificado de abajo, o ajustarlos con precisión milimétrica usando los controles deslizantes.
+                  </p>
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   {/* Slider Nombre */}
-                  <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
+                  <div className="space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-150/60">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 border-b border-slate-200/50 pb-1.5">
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
                         <input 
                           type="checkbox" 
                           checked={showNameOverlay} 
                           onChange={(e) => handleChange('showNameOverlay', e.target.checked)}
                           className="accent-[#082b4d]"
                         />
-                        <span>Nombre de Participante</span>
+                        <span className="font-extrabold text-[#082b4d] text-xs">Nombre de Participante</span>
                       </label>
-                      <span className="font-mono text-[#082b4d] text-[10px]">{nameYPercent}% (Y)</span>
+                      <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-extrabold">↕↔ Arrastrable</span>
                     </div>
-                    <input 
-                      type="range" 
-                      min="5" 
-                      max="95" 
-                      step="0.5"
-                      disabled={!showNameOverlay}
-                      value={nameYPercent}
-                      onChange={(e) => handleChange('nameYPercent', parseFloat(e.target.value))}
-                      className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Posición Vertical (Eje Y)</span>
+                          <span className="font-mono text-[#082b4d]">{nameYPercent}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="0.2"
+                          disabled={!showNameOverlay}
+                          value={nameYPercent}
+                          onChange={(e) => handleChange('nameYPercent', parseFloat(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Posición Horizontal (Eje X)</span>
+                          <span className="font-mono text-[#082b4d]">{nameXPercent}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="0.2"
+                          disabled={!showNameOverlay}
+                          value={nameXPercent}
+                          onChange={(e) => handleChange('nameXPercent', parseFloat(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Slider Cédula */}
-                  <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
+                  <div className="space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-150/60">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 border-b border-slate-200/50 pb-1.5">
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
                         <input 
                           type="checkbox" 
                           checked={showCedulaOverlay} 
                           onChange={(e) => handleChange('showCedulaOverlay', e.target.checked)}
                           className="accent-[#082b4d]"
                         />
-                        <span>Cédula de Identidad</span>
+                        <span className="font-extrabold text-[#082b4d] text-xs">Cédula de Identidad</span>
                       </label>
-                      <span className="font-mono text-[#082b4d] text-[10px]">{cedulaYPercent}% (Y)</span>
+                      <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-extrabold">↕↔ Arrastrable</span>
                     </div>
-                    <input 
-                      type="range" 
-                      min="5" 
-                      max="95" 
-                      step="0.5"
-                      disabled={!showCedulaOverlay}
-                      value={cedulaYPercent}
-                      onChange={(e) => handleChange('cedulaYPercent', parseFloat(e.target.value))}
-                      className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Posición Vertical (Eje Y)</span>
+                          <span className="font-mono text-[#082b4d]">{cedulaYPercent}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="0.2"
+                          disabled={!showCedulaOverlay}
+                          value={cedulaYPercent}
+                          onChange={(e) => handleChange('cedulaYPercent', parseFloat(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Posición Horizontal (Eje X)</span>
+                          <span className="font-mono text-[#082b4d]">{cedulaXPercent}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="0.2"
+                          disabled={!showCedulaOverlay}
+                          value={cedulaXPercent}
+                          onChange={(e) => handleChange('cedulaXPercent', parseFloat(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Slider Curso */}
-                  <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
+                  <div className="space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-150/60">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 border-b border-slate-200/50 pb-1.5">
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
                         <input 
                           type="checkbox" 
                           checked={showCourseOverlay} 
                           onChange={(e) => handleChange('showCourseOverlay', e.target.checked)}
                           className="accent-[#082b4d]"
                         />
-                        <span>Nombre del Curso</span>
+                        <span className="font-extrabold text-[#082b4d] text-xs">Nombre del Curso</span>
                       </label>
-                      <span className="font-mono text-[#082b4d] text-[10px]">{courseYPercent}% (Y)</span>
+                      <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-extrabold">↕↔ Arrastrable</span>
                     </div>
-                    <input 
-                      type="range" 
-                      min="5" 
-                      max="95" 
-                      step="0.5"
-                      disabled={!showCourseOverlay}
-                      value={courseYPercent}
-                      onChange={(e) => handleChange('courseYPercent', parseFloat(e.target.value))}
-                      className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Posición Vertical (Eje Y)</span>
+                          <span className="font-mono text-[#082b4d]">{courseYPercent}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="0.2"
+                          disabled={!showCourseOverlay}
+                          value={courseYPercent}
+                          onChange={(e) => handleChange('courseYPercent', parseFloat(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Posición Horizontal (Eje X)</span>
+                          <span className="font-mono text-[#082b4d]">{courseXPercent}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="0.2"
+                          disabled={!showCourseOverlay}
+                          value={courseXPercent}
+                          onChange={(e) => handleChange('courseXPercent', parseFloat(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Slider Fecha/Acreditación */}
-                  <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
+                  <div className="space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-150/60">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 border-b border-slate-200/50 pb-1.5">
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
                         <input 
                           type="checkbox" 
                           checked={showDateOverlay} 
                           onChange={(e) => handleChange('showDateOverlay', e.target.checked)}
                           className="accent-[#082b4d]"
                         />
-                        <span>Fecha y Texto Logístico</span>
+                        <span className="font-extrabold text-[#082b4d] text-xs">Fecha y Texto Logístico</span>
                       </label>
-                      <span className="font-mono text-[#082b4d] text-[10px]">{dateYPercent}% (Y)</span>
+                      <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-extrabold">↕↔ Arrastrable</span>
                     </div>
-                    <input 
-                      type="range" 
-                      min="5" 
-                      max="95" 
-                      step="0.5"
-                      disabled={!showDateOverlay}
-                      value={dateYPercent}
-                      onChange={(e) => handleChange('dateYPercent', parseFloat(e.target.value))}
-                      className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Posición Vertical (Eje Y)</span>
+                          <span className="font-mono text-[#082b4d]">{dateYPercent}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="0.2"
+                          disabled={!showDateOverlay}
+                          value={dateYPercent}
+                          onChange={(e) => handleChange('dateYPercent', parseFloat(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Posición Horizontal (Eje X)</span>
+                          <span className="font-mono text-[#082b4d]">{dateXPercent}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="0.2"
+                          disabled={!showDateOverlay}
+                          value={dateXPercent}
+                          onChange={(e) => handleChange('dateXPercent', parseFloat(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Slider QR Y */}
-                  <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
+                  {/* Slider QR */}
+                  <div className="space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-150/60">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 border-b border-slate-200/50 pb-1.5">
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
                         <input 
                           type="checkbox" 
                           checked={showQrOverlay} 
                           onChange={(e) => handleChange('showQrOverlay', e.target.checked)}
                           className="accent-[#082b4d]"
                         />
-                        <span>Bloque Código QR (Eje Vertical Y)</span>
+                        <span className="font-extrabold text-[#082b4d] text-xs">Bloque Código QR</span>
                       </label>
-                      <span className="font-mono text-[#082b4d] text-[10px]">{qrYPercent}% (Y)</span>
+                      <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-extrabold">↕↔ Arrastrable</span>
                     </div>
-                    <input 
-                      type="range" 
-                      min="5" 
-                      max="95" 
-                      step="0.5"
-                      disabled={!showQrOverlay}
-                      value={qrYPercent}
-                      onChange={(e) => handleChange('qrYPercent', parseFloat(e.target.value))}
-                      className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
-                    />
-                  </div>
-
-                  {/* Slider QR X */}
-                  <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                      <span>Bloque Código QR (Eje Horizontal X)</span>
-                      <span className="font-mono text-[#082b4d] text-[10px]">{qrXPercent}% (X)</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Posición (Eje Y)</span>
+                          <span className="font-mono text-[#082b4d]">{qrYPercent}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="0.2"
+                          disabled={!showQrOverlay}
+                          value={qrYPercent}
+                          onChange={(e) => handleChange('qrYPercent', parseFloat(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Posición (Eje X)</span>
+                          <span className="font-mono text-[#082b4d]">{qrXPercent}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="0.2"
+                          disabled={!showQrOverlay}
+                          value={qrXPercent}
+                          onChange={(e) => handleChange('qrXPercent', parseFloat(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                          <span>Tamaño de Escala</span>
+                          <span className="font-mono text-[#082b4d]">{qrScale}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="45" 
+                          max="165" 
+                          step="1"
+                          disabled={!showQrOverlay}
+                          value={qrScale}
+                          onChange={(e) => handleChange('qrScale', parseInt(e.target.value))}
+                          className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
+                        />
+                      </div>
                     </div>
-                    <input 
-                      type="range" 
-                      min="5" 
-                      max="95" 
-                      step="0.5"
-                      disabled={!showQrOverlay}
-                      value={qrXPercent}
-                      onChange={(e) => handleChange('qrXPercent', parseFloat(e.target.value))}
-                      className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
-                    />
-                  </div>
-
-                  {/* Escala de QR */}
-                  <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                      <span>Tamaño del Bloque QR</span>
-                      <span className="font-mono text-[#082b4d] text-[10px]">{qrScale}%</span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="40" 
-                      max="145" 
-                      step="1"
-                      disabled={!showQrOverlay}
-                      value={qrScale}
-                      onChange={(e) => handleChange('qrScale', parseInt(e.target.value))}
-                      className="w-full accent-[#082b4d] cursor-pointer disabled:opacity-50"
-                    />
                   </div>
                 </div>
 
-                <div className="text-[10px] text-slate-500 leading-normal bg-[#082b4d]/5 p-3 rounded-xl border border-[#082b4d]/10">
-                  💡 <strong>Consejo Práctico:</strong> Desmarque los textos de Fecha o Curso si su formato ya tiene estos datos impresos. Deje activos únicamente el Nombre de Participante, Cédula y QR de verificación para colocarlos encima de su plantilla con precisión milimétrica.
+                <div className="text-[10.5px] text-[#082b4d] leading-normal bg-[#082b4d]/5 p-3.5 rounded-xl border border-[#082b4d]/10">
+                  💡 <strong>Información Importante:</strong> Desmarque el texto del Curso o Fecha si la plantilla que subió ya trae estos detalles impresos. Deje activos únicamente el <strong>Nombre del Participante</strong>, <strong>Cédula</strong> y <strong>Código QR</strong> para ubicarlos exactamente donde usted desee sobre la imagen.
                 </div>
               </div>
             )}
@@ -901,6 +1145,8 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
         <div className="bg-slate-50 p-3 sm:p-5 rounded-2xl border border-dashed border-slate-300 shadow-inner overflow-x-auto">
           <div className="min-w-[640px] md:min-w-0">
             <CertificateTemplate
+              isDesigner={true}
+              onUpdatePosition={(key, val) => handleChange(key as any, val)}
               participant={dummyParticipant}
               signatures={signatures}
               layoutConfig={config}
