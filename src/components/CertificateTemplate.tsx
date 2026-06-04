@@ -289,7 +289,7 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
           borderColor: outerBorderColor,
           padding: verticalSpacing === 'tight' ? '1.25rem' : verticalSpacing === 'roomy' ? '2.5rem' : '2rem'
         }}
-        className="rounded-2xl relative bg-white/95"
+        className="rounded-2xl relative bg-white/95 certificate-inner-frame"
       >
         
         {/* Inner golden frame accent line */}

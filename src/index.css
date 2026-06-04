@@ -37,7 +37,7 @@
   }
 
   /* Hide raw sidebars, headers, banners and other administrative controls */
-  header, nav, footer, .no-print, button, .toast-container {
+  header, nav, footer, .no-print, button, .toast-container, [role="alert"] {
     display: none !important;
   }
 
@@ -52,20 +52,33 @@
 
   /* Force the printable container to stretch and cover the perfect zero-margin sheet canvas */
   .print-area {
-    position: fixed !important;
+    position: absolute !important;
     left: 0 !important;
     top: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
     margin: 0 !important;
-    padding: 32px !important;
+    padding: 1.5cm !important; /* Premium safety margin for generic home/office printers */
+    box-sizing: border-box !important;
     border: none !important;
     box-shadow: none !important;
-    box-sizing: border-box !important;
+    border-radius: 0 !important;
     background-color: white !important;
     z-index: 9999999 !important;
+  }
+
+  /* Force the inner certificate border box to expand to all available print height & width */
+  .certificate-inner-frame {
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-sizing: border-box !important;
+    border-radius: 8px !important;
   }
 }
 
