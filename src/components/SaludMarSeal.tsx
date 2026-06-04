@@ -7,138 +7,226 @@ interface SaludMarSealProps {
 
 export const SaludMarSeal: React.FC<SaludMarSealProps> = ({
   className = '',
-  size = 85
+  size = 110
 }) => {
   return (
     <div 
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size * 1.15 }}
       className={`relative inline-flex items-center justify-center select-none ${className}`}
     >
       <svg
         width="100%"
         height="100%"
-        viewBox="0 0 200 200"
+        viewBox="0 0 200 230"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="drop-shadow-[0_2px_8px_rgba(217,165,28,0.15)] hover:drop-shadow-[0_4px_12px_rgba(217,165,28,0.25)] transition-all duration-300"
+        className="transition-all duration-300 hover:scale-[1.03]"
       >
         <defs>
-          {/* Subtle concentric gold gradient for shiny premium ring edges */}
-          <linearGradient id="premiumGoldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#fef08a" /> {/* Tailwind yellow-200 */}
-            <stop offset="30%" stopColor="#d9a51c" /> {/* Brand Gold */}
-            <stop offset="70%" stopColor="#b48310" /> {/* Darker Gold */}
-            <stop offset="100%" stopColor="#a3760a" />
+          {/* Subtle elegant drop shadow to make the vector pop */}
+          <filter id="sealSophisticatedShadow" x="-10%" y="-10%" width="120%" height="130%" filterUnits="userSpaceOnUse">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#082b4d" floodOpacity="0.08" />
+            <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#d9a51c" floodOpacity="0.07" />
+          </filter>
+
+          {/* Premium gold gradients mapping precisely to the brand's aesthetic */}
+          <linearGradient id="sealGoldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fffbeb" />
+            <stop offset="40%" stopColor="#f59e0b" />
+            <stop offset="70%" stopColor="#d9a51c" />
+            <stop offset="100%" stopColor="#b45309" />
           </linearGradient>
 
-          {/* Clean, high-prestige circular path for engraving text wrapping */}
-          <path
-            id="sealCircularTextPath"
-            d="M 32,100 A 68,68 0 1,1 168,100 A 68,68 0 1,1 32,100"
-          />
+          {/* Luxury core metallic gold radial gradient */}
+          <radialGradient id="sealCoreGold" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#fffdf5" />
+            <stop offset="70%" stopColor="#fefaf0" />
+            <stop offset="100%" stopColor="#faf2db" />
+          </radialGradient>
+
+          {/* Deep corporate academic blue gradient */}
+          <linearGradient id="sealBlueAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e40af" />
+            <stop offset="60%" stopColor="#082b4d" />
+            <stop offset="100%" stopColor="#031526" />
+          </linearGradient>
         </defs>
 
-        {/* 1. SOLID CLASSY BACKGROUND PLATE (Protects the certificate paper background text grid) */}
-        <circle cx="100" cy="100" r="92" fill="#ffffff" />
-        {/* Soft elegant creamy luster radial gradient background */}
-        <circle cx="100" cy="100" r="92" fill="radial-gradient(circle, rgba(255,253,245,1) 0%, rgba(255,255,255,1) 100%)" />
-
-        {/* 2. DUAL CONCENTRIC GOLD OUTLINES */}
-        {/* Outer security border with continuous premium dot accents representing official registry */}
-        <circle cx="100" cy="100" r="91" stroke="url(#premiumGoldBorder)" strokeWidth="1.5" />
-        <circle cx="100" cy="100" r="88" stroke="url(#premiumGoldBorder)" strokeWidth="0.5" strokeDasharray="3 2" opacity="0.8" />
-        
-        {/* Main bold golden dividing ring */}
-        <circle cx="100" cy="100" r="76" stroke="url(#premiumGoldBorder)" strokeWidth="1.8" />
-        
-        {/* Innermost crisp gold guide ring */}
-        <circle cx="100" cy="100" r="54" stroke="url(#premiumGoldBorder)" strokeWidth="1" strokeDasharray="4 2" opacity="0.6" />
-        <circle cx="100" cy="100" r="51" stroke="#d9a51c" strokeWidth="0.8" opacity="0.4" />
-
-        {/* 3. WRAPPED SECURITY ENGRAVING TEXT */}
-        {/* Elegant typography in capital letters wrapping around the circular border */}
-        <text 
-          fill="#082b4d" 
-          fontSize="9.5" 
-          fontWeight="900" 
-          letterSpacing="1.8" 
-          fontFamily="'Plus Jakarta Sans', sans-serif" 
-          className="select-none tracking-widest font-black uppercase opacity-90"
-        >
-          <textPath href="#sealCircularTextPath" startOffset="0%">
-            SALUD-MAR ACADEMY • REGISTRO DE VALIDEZ •
-          </textPath>
-        </text>
-
-        {/* 4. CLASSICAL GOLDEN LAURELS (HONORARY BRANCHES SYMBOL OF EXCELLENCE) */}
-        {/* Masterfully drawn classical academic leaves hugging both sides of the center symbol */}
-        <g id="laurel-leaves" opacity="0.35" className="text-amber-600">
-          {/* Left Laurel Branch */}
-          <path d="M 60,140 C 48,125 48,95 62,75" stroke="#d9a51c" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-          <path d="M 52,130 C 44,124 45,116 52,120 Z" fill="#d9a51c" />
-          <path d="M 49,114 C 41,108 42,100 49,104 Z" fill="#d9a51c" />
-          <path d="M 51,98 C 43,92 44,84 51,88 Z" fill="#d9a51c" />
-          <path d="M 55,82 C 48,76 49,68 56,72 Z" fill="#d9a51c" />
-          
-          {/* Right Laurel Branch */}
-          <path d="M 140,140 C 152,125 152,95 138,75" stroke="#d9a51c" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-          <path d="M 148,130 C 156,124 155,116 148,120 Z" fill="#d9a51c" />
-          <path d="M 151,114 C 159,108 158,100 151,104 Z" fill="#d9a51c" />
-          <path d="M 149,98 C 157,92 156,84 149,88 Z" fill="#d9a51c" />
-          <path d="M 145,82 C 152,76 151,68 144,72 Z" fill="#d9a51c" />
-        </g>
-
-        {/* 5. BRAND SYMBOL AS THE CORE PIECE (COILED SERPENT ON STAFF OF ASCLEPIUS) */}
-        {/* Beautifully rendered inside the innermost gold framing */}
-        <g id="core-emblem-rod" transform="translate(68, 48) scale(0.128)" className="pointer-events-none select-none">
-          {/* The Rod (Staff) in deep elite brand blue */}
-          <rect x="244" y="20" width="12" height="310" rx="3" fill="#082b4d" />
-          {/* Top Sphere Knob in gold */}
-          <circle cx="250" cy="22" r="16" fill="#d9a51c" />
-          {/* Crest Cup in gold */}
-          <path d="M 230,36 C 230,50 270,50 270,36 L 264,36 C 264,45 236,45 236,36 Z" fill="#d9a51c" />
-
-          {/* Coiling Serpent Body in brand blue */}
-          <path 
-            d="M 250,295 
-               C 215,290 195,260 215,235 
-               C 235,210 275,200 270,175 
-               C 265,150 190,140 215,110 
-               C 230,90  265,85  285,100
-               C 295,108 305,108 310,113" 
-            stroke="#082b4d" 
-            strokeWidth="24" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            fill="none" 
+        {/* ELEGANT HANGING RIBBONS (Directly inspired by the user's ribbon-medal image structure) */}
+        <g id="medal-ribbon-tails" filter="url(#sealSophisticatedShadow)">
+          {/* Left Ribbon Tail (Brand Blue with thin Gold edging) */}
+          <path
+            d="M 82,110 L 52,215 L 75,200 L 98,215 L 98,126 Z"
+            fill="url(#sealBlueAccent)"
+            stroke="#d9a51c"
+            strokeWidth="1.2"
+            strokeLinejoin="round"
           />
-          
-          {/* Serpent Head and Eye */}
-          <path 
-            d="M 310,113 C 315,116 322,118 327,117 C 334,115 342,109 344,103 C 345,98 340,94 332,94 C 322,94 312,102 310,113 Z" 
-            fill="#082b4d" 
+          {/* Inner accent strip on left ribbon */}
+          <path
+            d="M 62,130 L 72,198 M 70,130 L 80,198"
+            stroke="#d9a51c"
+            strokeWidth="1"
+            opacity="0.3"
+            strokeLinecap="round"
           />
-          <circle cx="332" cy="101" r="3.5" fill="#fef08a" />
-          
-          {/* Golden double-forked tongue */}
-          <path 
-            d="M 344,103 Q 352,105 358,110 M 344,103 Q 354,100 360,98" 
-            stroke="#d9a51c" 
-            strokeWidth="4" 
-            strokeLinecap="round" 
-            fill="none" 
+
+          {/* Right Ribbon Tail (Classic Medal Gold with Deep Orange accent stripes) */}
+          <path
+            d="M 102,126 L 102,215 L 125,200 L 148,215 L 118,110 Z"
+            fill="url(#sealGoldAccent)"
+            stroke="#d9a51c"
+            strokeWidth="1.2"
+            strokeLinejoin="round"
+          />
+          {/* Middle accent shadow on right ribbon */}
+          <path
+            d="M 125,126 L 125,200"
+            stroke="#b45309"
+            strokeWidth="1.5"
+            opacity="0.25"
           />
         </g>
 
-        {/* 6. EMBOSSED THREE TRIPLE ACADEMIC STARS */}
-        {/* Small cluster of 3 premium gold stars at bottom center indicating level of certification */}
-        <g id="bottom-stars-row" transform="translate(100, 142)" className="text-[#d9a51c]">
-          {/* Center Star */}
-          <polygon points="0,-4 1.2,-1 4.5,-1 1.8,1 2.8,4 0,2.2 -2.8,4 -1.8,1 -4.5,-1 -1.2,-1" fill="currentColor" transform="scale(1.15)" />
-          {/* Left Star */}
-          <polygon points="0,-4 1.2,-1 4.5,-1 1.8,1 2.8,4 0,2.2 -2.8,4 -1.8,1 -4.5,-1 -1.2,-1" fill="currentColor" transform="translate(-10, 1) scale(0.8)" />
-          {/* Right Star */}
-          <polygon points="0,-4 1.2,-1 4.5,-1 1.8,1 2.8,4 0,2.2 -2.8,4 -1.8,1 -4.5,-1 -1.2,-1" fill="currentColor" transform="translate(10, 1) scale(0.8)" />
+        {/* MAIN ROSETTE MEDALLION BODY */}
+        <g id="rosette-head" filter="url(#sealSophisticatedShadow)">
+          {/* Background shield/circle - blocks anything from underneath */}
+          <circle cx="100" cy="85" r="76" fill="#ffffff" />
+          
+          {/* Very elegant outer thin gold frame circle (Just like the user's photo!) */}
+          <circle cx="100" cy="85" r="75" stroke="#d9a51c" strokeWidth="1.5" />
+          
+          {/* Subtle concentric rings for high security looks */}
+          <circle cx="100" cy="85" r="72" stroke="#e2e8f0" strokeWidth="1" />
+          <circle cx="100" cy="85" r="69" stroke="#082b4d" strokeWidth="0.7" strokeDasharray="3 2" opacity="0.15" />
+
+          {/* Elegant gold dots inside the golden perimeter line, framing the entire medallion */}
+          <g opacity="0.6">
+            <circle cx="100" cy="11.5" r="1.5" fill="#d9a51c" />
+            <circle cx="100" cy="158.5" r="1.5" fill="#d9a51c" />
+            <circle cx="26.5" cy="85" r="1.5" fill="#d9a51c" />
+            <circle cx="173.5" cy="85" r="1.5" fill="#d9a51c" />
+            
+            {/* Diagonals */}
+            <circle cx="48" cy="33" r="1.2" fill="#d9a51c" />
+            <circle cx="152" cy="137" r="1.2" fill="#d9a51c" />
+            <circle cx="152" cy="33" r="1.2" fill="#d9a51c" />
+            <circle cx="48" cy="137" r="1.2" fill="#d9a51c" />
+
+            {/* Intermediates */}
+            <circle cx="71" cy="17" r="1" fill="#d9a51c" />
+            <circle cx="129" cy="17" r="1" fill="#d9a51c" />
+            <circle cx="168" cy="47" r="1" fill="#d9a51c" />
+            <circle cx="168" cy="123" r="1" fill="#d9a51c" />
+            <circle cx="129" cy="153" r="1" fill="#d9a51c" />
+            <circle cx="71" cy="153" r="1" fill="#d9a51c" />
+            <circle cx="32" cy="123" r="1" fill="#d9a51c" />
+            <circle cx="32" cy="47" r="1" fill="#d9a51c" />
+          </g>
+
+          {/* Inner Plate Core with luxury soft radial aura */}
+          <circle cx="100" cy="85" r="58" fill="url(#sealCoreGold)" />
+          {/* Inner core framing ring */}
+          <circle cx="100" cy="85" r="56" stroke="#082b4d" strokeWidth="1" opacity="0.8" />
+          <circle cx="100" cy="85" r="53" stroke="#d9a51c" strokeWidth="0.8" strokeDasharray="3 1.5" opacity="0.5" />
+
+          {/* WRAPPED PREMIUM TYPOGRAPHY inside the upper arc */}
+          <path id="sealTopTextArc" d="M 52,85 A 48,48 0 0,1 148,85" fill="none" />
+          <text fill="#082b4d" fontSize="7.8" fontWeight="950" letterSpacing="0.8px" fontFamily="'Plus Jakarta Sans', sans-serif" className="uppercase font-black select-none tracking-widest">
+            <textPath href="#sealTopTextArc" startOffset="50%" textAnchor="middle">
+              REGISTRO OFICIAL
+            </textPath>
+          </text>
+
+          {/* WRAPPED PREMIUM TYPOGRAPHY inside the lower arc */}
+          <path id="sealBottomTextArc" d="M 148,85 A 48,48 0 0,1 52,85" fill="none" />
+          <text fill="#082b4d" fontSize="7.8" fontWeight="950" letterSpacing="0.8px" fontFamily="'Plus Jakarta Sans', sans-serif" className="uppercase font-black select-none tracking-widest">
+            <textPath href="#sealBottomTextArc" startOffset="50%" textAnchor="middle">
+              ACADEMIA SALUD-MAR
+            </textPath>
+          </text>
+
+          {/* Small Gold Divider Stars on the sides separating Top and Bottom texts */}
+          <polygon points="49,85 50.2,87.2 52.8,87.2 50.7,88.7 51.5,91.2 49,89.7 46.5,91.2 47.3,88.7 45.2,87.2 47.8,87.2" fill="#d9a51c" />
+          <polygon points="151,85 152.2,87.2 154.8,87.2 152.7,88.7 153.5,91.2 151,89.7 148.5,91.2 149.3,88.7 147.2,87.2 149.8,87.2" fill="#d9a51c" />
+
+          {/* CENTER UNIONS: OFFICIAL SALUD-MAR SACRED SYMBOL OF MEDICINE */}
+          {/* Rod of Asclepius and Snake nested inside the core plate with exquisite golden/blue highlights */}
+          <g id="official-asclepius-medallion" transform="translate(68, 51) scale(0.128)">
+            {/* The Staff - Royal deep blue */}
+            <rect x="244" y="20" width="12" height="310" rx="4" fill="#082b4d" />
+            {/* Golden top sphere */}
+            <circle cx="250" cy="18" r="16" fill="#d9a51c" />
+            {/* Golden crescent chalice base */}
+            <path d="M 230,34 C 230,48 270,48 270,34 L 263,34 C 263,43 237,43 237,34 Z" fill="#d9a51c" />
+
+            {/* Sleek Golden Serpent coiling gracefully around the staff */}
+            <path 
+              d="M 250,295 
+                 C 215,290 195,260 215,235 
+                 C 235,210 275,200 270,175 
+                 C 265,150 190,140 215,110 
+                 C 230,90  265,85  285,100
+                 C 295,108 305,108 310,113" 
+              stroke="#d9a51c" 
+              strokeWidth="20" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              fill="none" 
+            />
+            {/* Outer brand blue glow outline for the body to ensure premium contrast */}
+            <path 
+              d="M 250,295 
+                 C 215,290 195,260 215,235 
+                 C 235,210 275,200 270,175 
+                 C 265,150 190,140 215,110 
+                 C 230,90  265,85  285,100
+                 C 295,108 305,108 310,113" 
+              stroke="#082b4d" 
+              strokeWidth="7" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              fill="none" 
+            />
+
+            {/* Snake Head looking right */}
+            <path 
+              d="M 310,113 C 315,116 322,118 327,117 C 334,115 342,109 344,103 C 345,98 340,94 332,94 C 322,94 312,102 310,113 Z" 
+              fill="#082b4d" 
+            />
+            <path 
+              d="M 310,113 C 315,116 322,118 327,117 C 334,115 342,109 344,103 C 345,98 340,94 332,94 C 322,94 312,102 310,113 Z" 
+              stroke="#d9a51c" 
+              strokeWidth="3"
+              fill="none"
+            />
+            {/* Serpent Eye */}
+            <circle cx="332" cy="101" r="3.5" fill="#d9a51c" />
+
+            {/* Golden Forked Tongue */}
+            <path 
+              d="M 344,103 Q 352,105 358,110 M 344,103 Q 354,100 360,98" 
+              stroke="#d9a51c" 
+              strokeWidth="3" 
+              strokeLinecap="round" 
+              fill="none" 
+            />
+          </g>
+
+          {/* Classy Underlay Laurels - Symbolizing Excellence and Professional Completion */}
+          <g opacity="0.15" transform="translate(100, 85)" className="text-amber-800">
+            {/* Left branch */}
+            <path d="M -32,32 C -46,21 -46,-4 -32,-21" stroke="#d9a51c" strokeWidth="2.5" fill="none" />
+            <path d="M -37,18 C -45,15 -42,3 -34,6 Z" fill="#d9a51c" />
+            <path d="M -36,-1 C -44,-4 -41,-16 -33,-13 Z" fill="#d9a51c" />
+            {/* Right branch */}
+            <path d="M 32,32 C 46,21 46,-4 32,-21" stroke="#d9a51c" strokeWidth="2.5" fill="none" />
+            <path d="M 37,18 C 45,15 42,3 34,6 Z" fill="#d9a51c" />
+            <path d="M 36,-1 C 44,-4 41,-16 33,-13 Z" fill="#d9a51c" />
+          </g>
+
+          {/* Innermost Delicate Ring */}
+          <circle cx="100" cy="85" r="30" stroke="#d9a51c" strokeWidth="0.6" strokeDasharray="2 1.5" opacity="0.3" />
         </g>
       </svg>
     </div>
