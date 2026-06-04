@@ -1,0 +1,120 @@
+{
+  "entities": {
+    "Participant": {
+      "title": "Participant",
+      "description": "Un alumno inscripto en un curso con estado de asistencia, pago y certificado.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nombre": { "type": "string" },
+        "cedula": { "type": "string" },
+        "telefono": { "type": "string" },
+        "correo": { "type": "string" },
+        "empresa": { "type": "string" },
+        "cargo": { "type": "string" },
+        "cursoId": { "type": "string" },
+        "cursoNombre": { "type": "string" },
+        "fecha": { "type": "string" },
+        "modalidad": { "type": "string" },
+        "pago": { "type": "string", "enum": ["Pendiente", "Transferencia", "Giro", "Efectivo"] },
+        "observacion": { "type": "string" },
+        "asistencia": { "type": "boolean" },
+        "certificadoCodigo": { "type": "string" },
+        "certificadoEmitido": { "type": "boolean" },
+        "fechaEmisionCertificado": { "type": "string" },
+        "estado": { "type": "string", "enum": ["Pendiente", "Aceptado"] },
+        "examenAprobado": { "type": "boolean" },
+        "examenNota": { "type": "string" },
+        "fechaExamen": { "type": "string" }
+      },
+      "required": ["id", "nombre", "cedula", "telefono", "correo", "cursoId", "cursoNombre", "pago", "asistencia", "certificadoEmitido"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Un curso académico con su video de capacitación, bibliografía académica, infografías y examen digital.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "duration": { "type": "string" },
+        "modality": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "bibliography": { "type": "array" },
+        "infographics": { "type": "array" },
+        "examQuestions": { "type": "array" },
+        "claseHabilitada": { "type": "boolean" }
+      },
+      "required": ["id", "title", "category", "duration", "modality", "description"]
+    },
+    "SignatureConfig": {
+      "title": "SignatureConfig",
+      "description": "Configuración de la firma autorizada por un facilitador o directivo.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nombre": { "type": "string" },
+        "cargo": { "type": "string" },
+        "institucion": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["predeterminada", "dibujada", "texto", "imagen"] },
+        "firmaBase64": { "type": "string" },
+        "firmaTexto": { "type": "string" },
+        "fuenteEstilo": { "type": "string", "enum": ["style-1", "style-2", "style-3"] }
+      },
+      "required": ["id", "nombre", "cargo", "tipo"]
+    },
+    "CertificateLayoutConfig": {
+      "title": "CertificateLayoutConfig",
+      "description": "Configuración del diseño visual del certificado (fuentes, bordes, espaciadores, visibilidades).",
+      "type": "object",
+      "properties": {
+        "headerText": { "type": "string" },
+        "titleText": { "type": "string" },
+        "subtitleText": { "type": "string" },
+        "bodyIntroText": { "type": "string" },
+        "bodyLogisticsText": { "type": "string" },
+        "borderWidth": { "type": "number" },
+        "outerBorderColor": { "type": "string" },
+        "innerBorderColor": { "type": "string" },
+        "titleFontSize": { "type": "number" },
+        "nameFontSize": { "type": "number" },
+        "courseFontSize": { "type": "number" },
+        "signatureScale": { "type": "number" },
+        "verticalSpacing": { "type": "string", "enum": ["tight", "normal", "roomy"] },
+        "showLaurels": { "type": "boolean" },
+        "showVerificationBadge": { "type": "boolean" },
+        "showQrBar": { "type": "boolean" },
+        "showWatermark": { "type": "boolean" },
+        "showSignatureLine": { "type": "boolean" },
+        "signatureYOffset": { "type": "number" },
+        "showDividerLine": { "type": "boolean" }
+      },
+      "required": [
+        "headerText", "titleText", "subtitleText", "bodyIntroText", "bodyLogisticsText",
+        "borderWidth", "outerBorderColor", "innerBorderColor", "titleFontSize", "nameFontSize",
+        "courseFontSize", "signatureScale", "verticalSpacing", "showLaurels", "showVerificationBadge",
+        "showQrBar", "showWatermark", "showSignatureLine", "signatureYOffset", "showDividerLine"
+      ]
+    }
+  },
+  "firestore": {
+    "/courses/{courseId}": {
+      "schema": "#/entities/Course",
+      "description": "Capacitaciones de SaludMar."
+    },
+    "/participants/{participantId}": {
+      "schema": "#/entities/Participant",
+      "description": "Colección de participantes inscriptos al sistema."
+    },
+    "/signatures/{signatureId}": {
+      "schema": "#/entities/SignatureConfig",
+      "description": "Firmas configuradas del sistema académico."
+    },
+    "/layout/config": {
+      "schema": "#/entities/CertificateLayoutConfig",
+      "description": "Especificación de diseño del certificado."
+    }
+  }
+}

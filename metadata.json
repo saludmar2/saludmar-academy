@@ -1,0 +1,6 @@
+{
+  "name": "SaludMar Academy",
+  "description": "Sistema de gestión de cursos, inscripción y certificación digital de SaludMar",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
