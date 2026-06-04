@@ -27,10 +27,14 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
 
   // Sync state if prop changes
   useEffect(() => {
-    setConfigs(signatures);
+    if (signatures && signatures.length > 0) {
+      setConfigs(signatures);
+    }
   }, [signatures]);
 
-  const currentConfig = configs.find(c => c.id === activeSignee) || configs[0];
+  const currentConfig = configs.find(c => c.id === activeSignee) || configs.find(c => c.id === 'firmante-1') || configs[0] || { id: activeSignee, nombre: '', cargo: '', tipo: 'predeterminada' };
+  const sig1Config = configs.find(c => c.id === 'firmante-1') || configs[0] || { id: 'firmante-1', nombre: '', cargo: '', tipo: 'predeterminada' };
+  const sig2Config = configs.find(c => c.id === 'firmante-2') || configs[1] || configs[0] || { id: 'firmante-2', nombre: '', cargo: '', tipo: 'predeterminada' };
 
   // Canvas drawing functions
   const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -123,7 +127,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
       updateCurrentConfig({
         tipo: 'dibujada',
         firmaBase64: dataUrl
-      });
+      }, true);
       addToast(`Firma dibujada guardada para ${currentConfig.nombre}`, 'success');
     } catch (err) {
       addToast('Error al procesar el trazo del lienzo', 'error');
@@ -146,7 +150,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
         updateCurrentConfig({
           tipo: 'imagen',
           firmaBase64: event.target.result as string
-        });
+        }, true);
         addToast(`Imagen de firma cargada para ${currentConfig.nombre}`, 'success');
       }
     };
@@ -157,7 +161,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
   };
 
   // Helper code to update fields of currentConfig
-  const updateCurrentConfig = (updates: Partial<SignatureConfig>) => {
+  const updateCurrentConfig = (updates: Partial<SignatureConfig>, forceSaveToDb: boolean = false) => {
     const nextConfigs = configs.map(c => {
       if (c.id === currentConfig.id) {
         return {
@@ -168,14 +172,20 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
       return c;
     });
     setConfigs(nextConfigs);
-    // Instant background auto-save to Parent & Firestore on any change
-    onSaveSignatures(nextConfigs);
+    // Only invoke heavy cloud save immediately for discrete edits like drawings/images or explicit requests
+    if (forceSaveToDb) {
+      onSaveSignatures(nextConfigs);
+    }
   };
 
   // Save changes back to App system level
   const handleSaveChanges = () => {
     onSaveSignatures(configs);
     addToast('¡Configuraciones y firmas digitales guardadas correctamente!', 'success');
+  };
+
+  const handleBlurTextSave = () => {
+    onSaveSignatures(configs);
   };
 
   return (
@@ -220,12 +230,14 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
             </h4>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { id: 'firmante-1', name: configs[0].nombre, desc: configs[0].cargo },
-                { id: 'firmante-2', name: configs[1].nombre, desc: configs[1].cargo }
+                { id: 'firmante-1', name: sig1Config.nombre, desc: sig1Config.cargo },
+                { id: 'firmante-2', name: sig2Config.nombre, desc: sig2Config.cargo }
               ].map((item) => (
                 <button
                   key={item.id}
                   onClick={() => {
+                    // Sync uncommitted state prior to toggling signee
+                    onSaveSignatures(configs);
                     setActiveSignee(item.id as any);
                     clearCanvas();
                   }}
@@ -267,7 +279,8 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
                 type="text"
                 placeholder="Ej: Prof. Lic. Arnold Martínez"
                 value={currentConfig.nombre}
-                onChange={(e) => updateCurrentConfig({ nombre: e.target.value })}
+                onChange={(e) => updateCurrentConfig({ nombre: e.target.value }, false)}
+                onBlur={handleBlurTextSave}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-100/80 transition-all"
               />
             </div>
@@ -281,7 +294,8 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
                 type="text"
                 placeholder="Ej: Facilitador del Taller"
                 value={currentConfig.cargo}
-                onChange={(e) => updateCurrentConfig({ cargo: e.target.value })}
+                onChange={(e) => updateCurrentConfig({ cargo: e.target.value }, false)}
+                onBlur={handleBlurTextSave}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-100/80 transition-all"
               />
             </div>
@@ -295,7 +309,8 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
                 type="text"
                 placeholder="Ej: Salud-Mar"
                 value={currentConfig.institucion || ''}
-                onChange={(e) => updateCurrentConfig({ institucion: e.target.value })}
+                onChange={(e) => updateCurrentConfig({ institucion: e.target.value }, false)}
+                onBlur={handleBlurTextSave}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-100/80 transition-all"
               />
             </div>
@@ -323,7 +338,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
                   <button
                     key={tab.id}
                     onClick={() => {
-                      updateCurrentConfig({ tipo: tab.id as any });
+                      updateCurrentConfig({ tipo: tab.id as any }, true);
                       if (tab.id === 'dibujada') {
                         setTimeout(clearCanvas, 50); // Ensure clear canvas draws nicely
                       }
@@ -341,7 +356,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
               })}
             </div>
           </div>
-
+ 
           {/* METHOD RENDER CONFIG CONTENT PANEL */}
           <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/50 min-h-[190px] flex flex-col justify-between">
             
@@ -349,7 +364,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
             {currentConfig.tipo === 'predeterminada' && (
               <div className="space-y-3 py-2 text-center my-auto">
                 <div className="flex justify-center text-slate-400">
-                  <Award size={36} className="text-amber-500 animate-pulse" />
+                   <Award size={36} className="text-amber-500 animate-pulse" />
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs font-extrabold text-slate-800">Rúbrica vectorizada institucional</p>
@@ -359,7 +374,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
                 </div>
               </div>
             )}
-
+ 
             {/* 2. HANDWRITTEN TEXT ENTRY */}
             {currentConfig.tipo === 'texto' && (
               <div className="space-y-4 my-auto">
@@ -371,24 +386,25 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
                     type="text"
                     placeholder="Ej: Arnold Martínez"
                     value={currentConfig.firmaTexto || ''}
-                    onChange={(e) => updateCurrentConfig({ firmaTexto: e.target.value })}
+                    onChange={(e) => updateCurrentConfig({ firmaTexto: e.target.value }, false)}
+                    onBlur={handleBlurTextSave}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-850 focus:outline-none"
                   />
                 </div>
-
+ 
                 <div className="space-y-2">
                   <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                     Seleccione Estilo Caligráfico
                   </label>
                   <div className="grid grid-cols-3 gap-2">
-                    {[
+                    { [
                       { id: 'style-1', label: 'Elegante', style: "font-serif italic font-medium tracking-wide text-indigo-900" },
                       { id: 'style-2', label: 'Artístico', style: "font-serif font-light text-slate-900 line-through decoration-double decoration-slate-400" },
                       { id: 'style-3', label: 'Clásico', style: "font-mono italic tracking-tight text-emerald-950" }
                     ].map((st) => (
                       <button
                         key={st.id}
-                        onClick={() => updateCurrentConfig({ fuenteEstilo: st.id as any })}
+                        onClick={() => updateCurrentConfig({ fuenteEstilo: st.id as any }, true)}
                         className={`p-2.5 rounded-xl border text-[11px] font-extrabold text-center transition-all cursor-pointer ${
                           currentConfig.fuenteEstilo === st.id || (!currentConfig.fuenteEstilo && st.id === 'style-1')
                             ? 'border-indigo-600 bg-indigo-50 text-indigo-950 shadow-xs'

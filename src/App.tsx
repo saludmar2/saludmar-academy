@@ -188,6 +188,8 @@ export default function App() {
               id: (data.id || doc.id) as 'firmante-1' | 'firmante-2'
             });
           });
+          // Sort alphabetically by ID to guarantee firmante-1 is index 0 and firmante-2 is index 1
+          loadedSigs.sort((a, b) => a.id.localeCompare(b.id));
           setSignatures(loadedSigs);
         } else {
           // Initialize in firestore via Batch to prevent empty states
