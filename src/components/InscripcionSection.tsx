@@ -178,14 +178,6 @@ export const InscripcionSection: React.FC<InscripcionSectionProps> = ({
               <span>Volver al Inicio</span>
             </button>
           </div>
-
-          <button
-            onClick={() => onNavigate('admin')}
-            className="w-full flex items-center justify-center gap-2 bg-[#082b4d] hover:bg-[#0b5c8c] text-white font-extrabold py-3.5 px-6 rounded-xl text-xs shadow-md transition-colors cursor-pointer"
-          >
-            <span>Ir al Panel Admin para Aceptar Alumno (Demo)</span>
-            <ArrowRight size={14} />
-          </button>
         </div>
       </motion.div>
     );
