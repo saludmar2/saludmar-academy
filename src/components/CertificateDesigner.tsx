@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Course, CertificateLayoutConfig } from '../types';
+import { Course, Participant, SignatureConfig, CertificateLayoutConfig } from '../types';
+import { CertificateTemplate } from './CertificateTemplate';
 import { motion } from 'motion/react';
 import { 
   Sliders, FileText, CheckSquare, Palette, Layout, Type, 
-  RotateCcw, Sparkles
+  RotateCcw, Sparkles, Eye
 } from 'lucide-react';
 
 interface CertificateDesignerProps {
@@ -11,6 +12,7 @@ interface CertificateDesignerProps {
   courseLayoutConfigs?: Record<string, CertificateLayoutConfig>;
   courses?: Course[];
   initialSelectedCourseId?: string;
+  signatures?: SignatureConfig[];
   onSaveLayoutConfig: (courseId: string, newLayout: CertificateLayoutConfig) => void;
   addToast: (text: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
@@ -83,6 +85,7 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
   courseLayoutConfigs = {},
   courses = [],
   initialSelectedCourseId = 'default',
+  signatures = [],
   onSaveLayoutConfig,
   addToast
 }) => {
@@ -110,6 +113,28 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
   useEffect(() => {
     setConfig({ ...activeLayout });
   }, [selectedCourseId, layoutConfig, courseLayoutConfigs]);
+
+  // Dynamic preview participant
+  const selectedCourse = courses.find(c => c.id === selectedCourseId);
+  const dummyParticipant: Participant = {
+    id: 'preview-id',
+    nombre: 'MARÍA LUISA BENÍTEZ ACOSTA',
+    cedula: '4.567.890',
+    telefono: '0981 123 456',
+    correo: 'maria.benitez@gmail.com',
+    empresa: 'Hospital General IPS',
+    cargo: 'Enfermera Jefa',
+    cursoId: selectedCourseId === 'default' ? 'urgencias-metabolicas' : selectedCourseId,
+    cursoNombre: selectedCourse ? selectedCourse.title : 'CURSO ACADÉMICO DE DEMOSTRACIÓN',
+    fecha: new Date().toISOString().split('T')[0],
+    modalidad: 'Virtual por Zoom',
+    pago: 'Transferencia',
+    observacion: 'Aprobación automática',
+    asistencia: true,
+    certificadoEmitido: true,
+    certificadoCodigo: 'SM-' + (selectedCourseId === 'default' ? 'GEN' : selectedCourseId.slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, '')) + '-998877',
+    estado: 'Aceptado'
+  };
 
   const handleChange = (key: keyof CertificateLayoutConfig, value: any) => {
     const updated = {
@@ -537,6 +562,35 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
 
         </div>
       </div>
+
+      {/* SECTOR DE VISTA PREVIA EN TIEMPO REAL INTEGRADA */}
+      <div className="pt-6 border-t border-slate-100 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-2 text-[#082b4d]">
+            <Eye size={18} className="text-amber-505 font-extrabold" />
+            <h4 className="text-sm font-black uppercase tracking-wider text-[#082b4d]">
+              👁️ Vista Previa en Tiempo Real del Certificado:
+            </h4>
+          </div>
+          <span className="text-[10px] bg-[#082b4d]/5 text-[#082b4d] font-bold px-3 py-1 rounded-full border border-[#082b4d]/15 self-start sm:self-auto">
+            {selectedCourseId === 'default' ? '✨ Plantilla General' : `📚 Curso: ${dummyParticipant.cursoNombre}`}
+          </span>
+        </div>
+        
+        <div className="bg-slate-50 p-3 sm:p-5 rounded-2xl border border-dashed border-slate-300 shadow-inner overflow-x-auto">
+          <div className="min-w-[640px] md:min-w-0">
+            <CertificateTemplate
+              participant={dummyParticipant}
+              signatures={signatures}
+              layoutConfig={config}
+            />
+          </div>
+        </div>
+        <p className="text-[10px] text-center text-slate-400 italic">
+          * Los datos mostrados en este visor son de demostración. Al guardar, este diseño exacto se aplicará a todas las emisiones automáticas de dicho curso.
+        </p>
+      </div>
+
     </div>
   );
 };

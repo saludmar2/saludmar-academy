@@ -453,6 +453,7 @@ export const AdminSection: React.FC<AdminSectionProps> = ({
               layoutConfig={layoutConfig}
               courseLayoutConfigs={courseLayoutConfigs}
               courses={courses}
+              signatures={signatures}
               onSaveLayoutConfig={onSaveLayoutConfig}
               addToast={addToast}
             />
