@@ -188,9 +188,14 @@ export default function App() {
               id: (data.id || doc.id) as 'firmante-1' | 'firmante-2'
             });
           });
-          // Sort alphabetically by ID to guarantee firmante-1 is index 0 and firmante-2 is index 1
-          loadedSigs.sort((a, b) => a.id.localeCompare(b.id));
-          setSignatures(loadedSigs);
+          
+          // Double guarantee that both firmante-1 and firmante-2 are populated by merging loaded fields with defaults
+          const completeSigs = DEFAULT_SIGNATURES.map((defSig) => {
+            const loaded = loadedSigs.find(s => s.id === defSig.id);
+            return loaded ? { ...defSig, ...loaded } : defSig;
+          });
+          
+          setSignatures(completeSigs);
         } else {
           // Initialize in firestore via Batch to prevent empty states
           const batch = writeBatch(db);
@@ -1002,6 +1007,7 @@ export default function App() {
                         layoutConfig={layoutConfig}
                         courseLayoutConfigs={courseLayoutConfigs}
                         courses={courses}
+                        signatures={signatures}
                         initialSelectedCourseId={targetCertificateParticipant.cursoId}
                         onSaveLayoutConfig={handleSaveLayoutConfig}
                         addToast={addToast}
