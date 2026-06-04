@@ -26,7 +26,8 @@ interface AdminSectionProps {
   signatures: SignatureConfig[];
   onSaveSignatures: (newSignatures: SignatureConfig[]) => void;
   layoutConfig: CertificateLayoutConfig;
-  onSaveLayoutConfig: (newLayout: CertificateLayoutConfig) => void;
+  courseLayoutConfigs?: Record<string, CertificateLayoutConfig>;
+  onSaveLayoutConfig: (courseId: string, newLayout: CertificateLayoutConfig) => void;
   onAcceptParticipant: (id: string) => void;
   onAcceptAllPending: (courseId: string) => void;
   onUnlockAllCertificates: (courseId: string) => void;
@@ -51,6 +52,7 @@ export const AdminSection: React.FC<AdminSectionProps> = ({
   signatures,
   onSaveSignatures,
   layoutConfig,
+  courseLayoutConfigs = {},
   onSaveLayoutConfig,
   onAcceptParticipant,
   onAcceptAllPending,
@@ -449,6 +451,8 @@ export const AdminSection: React.FC<AdminSectionProps> = ({
           >
             <CertificateDesigner
               layoutConfig={layoutConfig}
+              courseLayoutConfigs={courseLayoutConfigs}
+              courses={courses}
               onSaveLayoutConfig={onSaveLayoutConfig}
               addToast={addToast}
             />

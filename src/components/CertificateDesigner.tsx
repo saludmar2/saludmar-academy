@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CertificateLayoutConfig } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Course, CertificateLayoutConfig } from '../types';
 import { motion } from 'motion/react';
 import { 
   Sliders, FileText, CheckSquare, Palette, Layout, Type, 
@@ -8,7 +8,10 @@ import {
 
 interface CertificateDesignerProps {
   layoutConfig: CertificateLayoutConfig;
-  onSaveLayoutConfig: (newLayout: CertificateLayoutConfig) => void;
+  courseLayoutConfigs?: Record<string, CertificateLayoutConfig>;
+  courses?: Course[];
+  initialSelectedCourseId?: string;
+  onSaveLayoutConfig: (courseId: string, newLayout: CertificateLayoutConfig) => void;
   addToast: (text: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
@@ -77,15 +80,36 @@ const PRESET_STYLES = [
 
 export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
   layoutConfig,
+  courseLayoutConfigs = {},
+  courses = [],
+  initialSelectedCourseId = 'default',
   onSaveLayoutConfig,
   addToast
 }) => {
-  const [config, setConfig] = useState<CertificateLayoutConfig>({ ...layoutConfig });
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(initialSelectedCourseId);
 
-  // Sync internal state with prop changes automatically
-  React.useEffect(() => {
-    setConfig(layoutConfig);
-  }, [layoutConfig]);
+  // Sync with initialSelectedCourseId when it changes external-wise
+  useEffect(() => {
+    if (initialSelectedCourseId) {
+      setSelectedCourseId(initialSelectedCourseId);
+    }
+  }, [initialSelectedCourseId]);
+
+  // Determine which layout configuration to edit
+  const getActiveLayout = (): CertificateLayoutConfig => {
+    if (selectedCourseId !== 'default' && courseLayoutConfigs[selectedCourseId]) {
+      return courseLayoutConfigs[selectedCourseId];
+    }
+    return layoutConfig;
+  };
+
+  const activeLayout = getActiveLayout();
+  const [config, setConfig] = useState<CertificateLayoutConfig>({ ...activeLayout });
+
+  // Update editor state when selected course or layouts change
+  useEffect(() => {
+    setConfig({ ...activeLayout });
+  }, [selectedCourseId, layoutConfig, courseLayoutConfigs]);
 
   const handleChange = (key: keyof CertificateLayoutConfig, value: any) => {
     const updated = {
@@ -93,7 +117,7 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
       [key]: value
     };
     setConfig(updated);
-    onSaveLayoutConfig(updated); // Instant real-time save and render feedback!
+    onSaveLayoutConfig(selectedCourseId, updated); // Instant real-time save and render feedback!
   };
 
   const handleApplyPreset = (preset: typeof PRESET_STYLES[0]) => {
@@ -102,13 +126,16 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
       ...preset.config
     };
     setConfig(updated);
-    onSaveLayoutConfig(updated);
-    addToast(`Diseño seteo: "${preset.name}" aplicado con éxito`, 'success');
+    onSaveLayoutConfig(selectedCourseId, updated);
+    addToast(`Diseño aplicado con éxito para la sección actual`, 'success');
   };
 
   const handleSave = () => {
-    onSaveLayoutConfig(config);
-    addToast('¡Diseño del certificado guardado permanentemente!', 'success');
+    onSaveLayoutConfig(selectedCourseId, config);
+    const courseLabel = selectedCourseId === 'default' 
+      ? 'Plantilla General' 
+      : courses.find(c => c.id === selectedCourseId)?.title || selectedCourseId;
+    addToast(`¡Diseño de "${courseLabel}" guardado permanentemente!`, 'success');
   };
 
   const handleRestoreDefaults = () => {
@@ -135,8 +162,8 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
       showDividerLine: true,
     };
     setConfig(defaults);
-    onSaveLayoutConfig(defaults);
-    addToast('Dimensiones y textos restaurados al valor original', 'info');
+    onSaveLayoutConfig(selectedCourseId, defaults);
+    addToast('Dimensiones y textos restaurados al valor original para esta sección', 'info');
   };
 
   return (
@@ -190,6 +217,30 @@ export const CertificateDesigner: React.FC<CertificateDesignerProps> = ({
           ))}
         </div>
       </div>
+
+      {/* SELECTOR DE CURSO/CAPACITACIÓN */}
+      {courses && courses.length > 0 && (
+        <div className="bg-[#082b4d]/5 border border-[#082b4d]/15 p-4 rounded-2xl space-y-2">
+          <label className="block text-xs font-black text-[#082b4d] tracking-wide uppercase">
+            🎯 Seleccionar Capacitación a Personalizar:
+          </label>
+          <select
+            value={selectedCourseId}
+            onChange={(e) => setSelectedCourseId(e.target.value)}
+            className="w-full text-xs font-bold text-slate-800 bg-white border border-slate-250 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#082b4d]"
+          >
+            <option value="default">✨ Plantilla General (Por defecto de la Academia)</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                📚 {course.title}
+              </option>
+            ))}
+          </select>
+          <p className="text-[10px] text-slate-500 italic">
+            Cualquier cambio se aplicará de forma exclusiva a los diplomas emitidos para el curso seleccionado.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-2">
         {/* COL 1: TEXT LABELS & CORES */}

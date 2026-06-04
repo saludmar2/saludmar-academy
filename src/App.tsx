@@ -70,6 +70,7 @@ export default function App() {
   const [selectedCertificateId, setSelectedCertificateId] = useState<string | null>(null);
   const [signatures, setSignatures] = useState<SignatureConfig[]>([]);
   const [layoutConfig, setLayoutConfig] = useState<CertificateLayoutConfig>(DEFAULT_LAYOUT_CONFIG);
+  const [courseLayoutConfigs, setCourseLayoutConfigs] = useState<Record<string, CertificateLayoutConfig>>({});
   const [isAdminDesignMode, setIsAdminDesignMode] = useState<boolean>(false);
   const [urlVerifyCode, setUrlVerifyCode] = useState<string | null>(null);
   const [urlSelectedCursoId, setUrlSelectedCursoId] = useState<string | null>(null);
@@ -150,16 +151,30 @@ export default function App() {
         const systemStatusSnap = await getDoc(systemStatusRef);
         const alreadyInitialized = systemStatusSnap.exists() && systemStatusSnap.data()?.initialized === true;
 
-        // 1. Load Layout Config
-        const layoutRef = doc(db, 'layout', 'config');
-        const layoutSnap = await getDoc(layoutRef);
-        if (layoutSnap.exists()) {
-          setLayoutConfig(layoutSnap.data() as CertificateLayoutConfig);
+        // 1. Load Layout Config and Course-Specific Layout Overrides from "layout" collection
+        const layoutsCollectionRef = collection(db, 'layout');
+        const layoutsSnap = await getDocs(layoutsCollectionRef);
+        const fetchedCourseLayouts: Record<string, CertificateLayoutConfig> = {};
+        let generalConfigDoc: CertificateLayoutConfig | null = null;
+
+        layoutsSnap.forEach((doc) => {
+          if (doc.id === 'config') {
+            generalConfigDoc = doc.data() as CertificateLayoutConfig;
+          } else if (doc.id.startsWith('course_')) {
+            const courseId = doc.id.replace('course_', '');
+            fetchedCourseLayouts[courseId] = doc.data() as CertificateLayoutConfig;
+          }
+        });
+
+        if (generalConfigDoc) {
+          setLayoutConfig(generalConfigDoc);
         } else {
           // Initialize in firestore
+          const layoutRef = doc(db, 'layout', 'config');
           await setDoc(layoutRef, DEFAULT_LAYOUT_CONFIG);
           setLayoutConfig(DEFAULT_LAYOUT_CONFIG);
         }
+        setCourseLayoutConfigs(fetchedCourseLayouts);
 
         // 2. Load Signatures
         const sigsCollectionRef = collection(db, 'signatures');
@@ -258,14 +273,35 @@ export default function App() {
     }
   };
 
-  const handleSaveLayoutConfig = async (newLayout: CertificateLayoutConfig) => {
-    setLayoutConfig(newLayout);
+  const handleSaveLayoutConfig = async (courseIdOrLayout: string | CertificateLayoutConfig, optionalLayout?: CertificateLayoutConfig) => {
+    let courseId = 'default';
+    let newLayout: CertificateLayoutConfig;
+
+    if (typeof courseIdOrLayout === 'string') {
+      courseId = courseIdOrLayout;
+      newLayout = optionalLayout!;
+    } else {
+      newLayout = courseIdOrLayout;
+    }
+
     try {
-      const layoutRef = doc(db, 'layout', 'config');
-      await setDoc(layoutRef, newLayout);
-      addToast('Diseño guardado en Firebase.', 'success');
+      if (courseId === 'default' || !courseId) {
+        setLayoutConfig(newLayout);
+        const layoutRef = doc(db, 'layout', 'config');
+        await setDoc(layoutRef, newLayout);
+        addToast('Diseño de plantilla general guardado en Firebase.', 'success');
+      } else {
+        setCourseLayoutConfigs(prev => ({
+          ...prev,
+          [courseId]: newLayout
+        }));
+        const layoutRef = doc(db, 'layout', 'course_' + courseId);
+        await setDoc(layoutRef, newLayout);
+        const courseObj = courses.find(c => c.id === courseId);
+        addToast(`Diseño para "${courseObj?.title || courseId}" guardado en Firebase.`, 'success');
+      }
     } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, 'layout/config');
+      handleFirestoreError(e, OperationType.WRITE, `layout/${courseId === 'default' ? 'config' : 'course_' + courseId}`);
     }
   };
 
@@ -886,6 +922,7 @@ export default function App() {
               signatures={signatures}
               onSaveSignatures={handleSaveSignatures}
               layoutConfig={layoutConfig}
+              courseLayoutConfigs={courseLayoutConfigs}
               onSaveLayoutConfig={handleSaveLayoutConfig}
               onAcceptParticipant={handleAcceptParticipant}
               onAcceptAllPending={handleAcceptAllPending}
@@ -959,6 +996,9 @@ export default function App() {
                     <div className="lg:col-span-5 no-print">
                       <CertificateDesigner 
                         layoutConfig={layoutConfig}
+                        courseLayoutConfigs={courseLayoutConfigs}
+                        courses={courses}
+                        initialSelectedCourseId={targetCertificateParticipant.cursoId}
                         onSaveLayoutConfig={handleSaveLayoutConfig}
                         addToast={addToast}
                       />
@@ -969,7 +1009,7 @@ export default function App() {
                     <CertificateTemplate 
                       participant={targetCertificateParticipant} 
                       signatures={signatures} 
-                      layoutConfig={layoutConfig}
+                      layoutConfig={courseLayoutConfigs[targetCertificateParticipant.cursoId] || layoutConfig}
                     />
                   </div>
                 </div>
