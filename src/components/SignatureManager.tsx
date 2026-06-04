@@ -18,6 +18,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
   addToast
 }) => {
   const [configs, setConfigs] = useState<SignatureConfig[]>(signatures);
+  const configsRef = useRef<SignatureConfig[]>(signatures);
   const [activeSignee, setActiveSignee] = useState<'firmante-1' | 'firmante-2'>('firmante-1');
   const [hasInitialized, setHasInitialized] = useState(false);
   
@@ -30,6 +31,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
   useEffect(() => {
     if (!hasInitialized && signatures && signatures.length > 0) {
       setConfigs(signatures);
+      configsRef.current = signatures;
       setHasInitialized(true);
     }
   }, [signatures, hasInitialized]);
@@ -164,7 +166,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
 
   // Helper code to update fields of currentConfig
   const updateCurrentConfig = (updates: Partial<SignatureConfig>, forceSaveToDb: boolean = false) => {
-    const nextConfigs = configs.map(c => {
+    const nextConfigs = configsRef.current.map(c => {
       if (c.id === currentConfig.id) {
         return {
           ...c,
@@ -174,18 +176,19 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
       return c;
     });
     setConfigs(nextConfigs);
+    configsRef.current = nextConfigs;
     // Propagate to parent state immediately for smooth preview, option to force cloud write
     onSaveSignatures(nextConfigs, forceSaveToDb);
   };
 
   // Save changes back to App system level
   const handleSaveChanges = () => {
-    onSaveSignatures(configs, true);
+    onSaveSignatures(configsRef.current, true);
     addToast('¡Configuraciones y firmas digitales guardadas correctamente!', 'success');
   };
 
   const handleBlurTextSave = () => {
-    onSaveSignatures(configs, true);
+    onSaveSignatures(configsRef.current, true);
   };
 
   return (
@@ -237,7 +240,7 @@ export const SignatureManager: React.FC<SignatureManagerProps> = ({
                   key={item.id}
                   onClick={() => {
                     // Sync uncommitted state prior to toggling signee
-                    onSaveSignatures(configs, true);
+                    onSaveSignatures(configsRef.current, true);
                     setActiveSignee(item.id as any);
                     clearCanvas();
                   }}
