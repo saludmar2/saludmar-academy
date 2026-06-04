@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Participant, SignatureConfig, CertificateLayoutConfig } from '../types';
 import { SaludMarLogo } from './SaludMarLogo';
+import { SaludMarSeal } from './SaludMarSeal';
 import { Award, ShieldCheck, QrCode } from 'lucide-react';
 import QRCode from 'qrcode';
 
@@ -447,11 +448,10 @@ export const CertificateTemplate: React.FC<CertificateTemplateProps> = ({
             </div>
           </div>
 
-          {/* Tiny centered hologram backdrop inside bottom layer for interactive styling */}
-          <div className="absolute inset-x-0 bottom-0 top-0 flex items-center justify-center pointer-events-none select-none opacity-10 sm:opacity-100">
-            <div className="w-14 h-14 rounded-full border border-amber-500 bg-amber-50/10 flex items-center justify-center relative shadow-inner p-1">
-              <Award className="text-amber-600/70" size={24} />
-              <div className="absolute inset-0 border border-amber-400 animate-[spin_60s_linear_infinite] rounded-full scale-105" />
+          {/* Centered official SaludMar Seal between the signatures */}
+          <div className="absolute inset-x-0 bottom-0 top-0 flex items-center justify-center pointer-events-none select-none z-10">
+            <div className="transform translate-y-[-14px] sm:translate-y-[-18px]">
+              <SaludMarSeal size={90} />
             </div>
           </div>
         </div>
